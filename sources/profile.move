@@ -1,4 +1,4 @@
-// Copyright 2022 OmniBTC Authors. Licensed under Apache-2.0 License.
+// Copyright 2022 ComingChat Authors. Licensed under Apache-2.0 License.
 module dmens::profile {
     use std::vector;
 
