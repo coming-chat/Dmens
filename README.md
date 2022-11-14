@@ -1,6 +1,4 @@
 # Dmens
 
-Dmens is a reduction of "Decentralize Moments",
-building a blockchain Twitter protocol on the Sui network,
-and integrating it in ComingChat in the form of a product similar
-to WeChat Moments.
+Dmens is "Decentralized Moments", which is a Blockchain Twitter Protocol built on the Sui network,
+and integrated into ComingChat in a form similar to WeChat Moments.
