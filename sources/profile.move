@@ -3,18 +3,24 @@ module dmens::profile {
     use std::vector;
 
     use sui::object::{Self, UID};
+    // TODO: wait to sui devnet 0.17.0
+    //use sui::ed25519::ed25519_verify;
     use sui::table::{Self, Table};
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
-    use sui::vec_set::{Self, VecSet};
+
+    use dmens::dmens::new_follow;
+
+    // TODO: replace real public key
+    const INIT_CAPTCHA_PUBLIC_KEY: vector<u8> = x"";
 
     const ERR_NO_PERMISSIONS: u64 = 1;
+    const ERR_INVALID_CAPTCHA: u64 = 2;
 
-    // TODO: update profile with admin signature verification
     struct Global has key {
         id: UID,
         creator: address,
-        admins: VecSet<address>,
+        captcha_public_key: vector<u8>,
         profiles: Table<address, vector<u8>>
     }
 
@@ -23,48 +29,63 @@ module dmens::profile {
             Global {
                 id: object::new(ctx),
                 creator: tx_context::sender(ctx),
-                admins: vec_set::empty<address>(),
+                captcha_public_key: INIT_CAPTCHA_PUBLIC_KEY,
                 profiles: table::new<address, vector<u8>>(ctx),
             }
         )
     }
 
-    public entry fun add_admin(
+    public entry fun update_captcha_key(
         global: &mut Global,
-        new_admin: address,
+        new_pubkey: vector<u8>,
         ctx: &mut TxContext
     ) {
         assert!(global.creator == tx_context::sender(ctx), ERR_NO_PERMISSIONS);
-        vec_set::insert(&mut global.admins, new_admin)
-    }
-
-    public entry fun remove_admin(
-        global: &mut Global,
-        old_admin: address,
-        ctx: &mut TxContext
-    ) {
-        assert!(global.creator == tx_context::sender(ctx), ERR_NO_PERMISSIONS);
-        vec_set::remove(&mut global.admins, &old_admin)
+        global.captcha_public_key = new_pubkey
     }
 
     public entry fun update_profile(
         global: &mut Global,
-        user: address,
-        user_profile: vector<u8>,
+        profile: vector<u8>,
+        _captcha: vector<u8>,
+        _signature: vector<u8>,
         ctx: &mut TxContext
     ) {
-        let operator = tx_context::sender(ctx);
-        assert!(
-            global.creator == operator
-                || vec_set::contains(&global.admins, &operator),
-            ERR_NO_PERMISSIONS
-        );
+        let user = tx_context::sender(ctx);
+        // assert!(
+        //     ed25519_verify(&signature, &global.captcha_public_key, &captcha),
+        //     ERR_INVALID_CAPTCHA
+        // );
 
         if (!table::contains(&global.profiles, user)) {
-            table::add(&mut global.profiles, user, vector::empty<u8>())
+            table::add(&mut global.profiles, user, vector::empty<u8>());
+            new_follow(ctx);
         };
 
         let mut_profile = table::borrow_mut(&mut global.profiles, user);
-        *mut_profile = user_profile
+        *mut_profile = profile
     }
+
+    public entry fun destory(
+        global: &mut Global,
+        ctx: &mut TxContext
+    ) {
+        let _ = table::remove(
+            &mut global.profiles,
+            tx_context::sender(ctx)
+        );
+    }
+
+    // #[test]
+    // fun test_ed25519_verify() {
+    //     use sui::ed25519::ed25519_verify;
+    //
+    //     let _privkey = x"1B934F07804CEEEA5D9D59BE1834345EE747BEBD939D92E68F41FAC98C9C374B";
+    //     let pubkey = x"1ECFFCFE36FA28E7B21C936373EAC4F345EC5B66E2BDE7E67444ADBFAF614B09";
+    //
+    //     let signature = x"B6A1424ACCB14F988E2A82E9B91E17575EF20878838054495D973F3370F739D7CA4E55F4A9FD85D2D7D8F259D543A3736E80F8601D89DA9CEB10FD8CE0560F01";
+    //     let msg = b"test";
+    //
+    //     assert!(ed25519_verify(&signature, &pubkey, &msg), 1)
+    // }
 }

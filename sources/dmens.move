@@ -11,6 +11,9 @@ module dmens::dmens {
     use sui::object::{Self, UID};
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
+    use sui::table::{Self, Table};
+
+    friend dmens::profile;
 
     /// Max text length.
     /// Refer to https://github.com/twitter/twitter-text/blob/master/config/v3.json
@@ -49,6 +52,23 @@ module dmens::dmens {
         ref_id: Option<address>,
         // Which action create the Dmens.
         action: u8,
+    }
+
+    struct Follows has key {
+        id: UID,
+        accounts: Table<address, bool>
+    }
+
+    public(friend) fun new_follow(
+        ctx: &mut TxContext,
+    ) {
+        transfer::transfer(
+            Follows {
+                id: object::new(ctx),
+                accounts: table::new<address, bool>(ctx)
+            },
+            tx_context::sender(ctx)
+        )
     }
 
     /// For ACTION_POST
@@ -219,5 +239,17 @@ module dmens::dmens {
     public entry fun burn(dmens: Dmens) {
         let Dmens { id, app_id: _, poster: _, text: _, ref_id: _, action: _ } = dmens;
         object::delete(id);
+    }
+
+    public entry fun follow(
+        follows: &mut Follows,
+        account: address,
+        to_follow: bool,
+    ) {
+        if (to_follow) {
+            table::add(&mut follows.accounts, account, true);
+        } else {
+            let _ = table::remove(&mut follows.accounts, account);
+        }
     }
 }
