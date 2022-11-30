@@ -1,6 +1,8 @@
 // Copyright 2022 ComingChat Authors. Licensed under Apache-2.0 License.
 module dmens::profile {
     use std::vector;
+    use std::bcs;
+    use std::hash::sha3_256;
 
     use sui::object::{Self, UID};
     // TODO: wait to sui devnet 0.17.0
@@ -47,11 +49,16 @@ module dmens::profile {
     public entry fun update_profile(
         global: &mut Global,
         profile: vector<u8>,
-        _captcha: vector<u8>,
         _signature: vector<u8>,
         ctx: &mut TxContext
     ) {
         let user = tx_context::sender(ctx);
+
+        let info: vector<u8> = vector::empty<u8>();
+        vector::append<u8>(&mut info, bcs::to_bytes(&user));
+        vector::append<u8>(&mut info, bcs::to_bytes(&profile));
+        let _captcha: vector<u8> = sha3_256(info);
+        
         // assert!(
         //     ed25519_verify(&signature, &global.captcha_public_key, &captcha),
         //     ERR_INVALID_CAPTCHA
