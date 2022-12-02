@@ -11,7 +11,8 @@ module dmens::dmens {
     use sui::object::{Self, UID};
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
-    use sui::table::{Self, Table};
+    use sui::vec_set::{Self, VecSet};
+    use sui::event::emit;
 
     friend dmens::profile;
 
@@ -38,6 +39,12 @@ module dmens::dmens {
     /// Unsupport action
     const ERR_UNEXPECTED_ACTION: u64 = 2;
 
+    struct FollowEvent has copy, drop {
+        account: address,
+        target: address,
+        to_follow: bool
+    }
+
     /// Dmens NFT (i.e., a post, retweet, like, reply message etc).
     struct Dmens has key, store {
         id: UID,
@@ -56,7 +63,7 @@ module dmens::dmens {
 
     struct Follows has key {
         id: UID,
-        accounts: Table<address, bool>
+        accounts: VecSet<address>
     }
 
     public(friend) fun new_follow(
@@ -65,7 +72,7 @@ module dmens::dmens {
         transfer::transfer(
             Follows {
                 id: object::new(ctx),
-                accounts: table::new<address, bool>(ctx)
+                accounts: vec_set::empty<address>()
             },
             tx_context::sender(ctx)
         )
@@ -245,11 +252,20 @@ module dmens::dmens {
         follows: &mut Follows,
         account: address,
         to_follow: bool,
+        ctx: &mut TxContext,
     ) {
         if (to_follow) {
-            table::add(&mut follows.accounts, account, true);
+            vec_set::insert(&mut follows.accounts, account);
         } else {
-            let _ = table::remove(&mut follows.accounts, account);
-        }
+            vec_set::remove(&mut follows.accounts, &account);
+        };
+
+        emit(
+            FollowEvent {
+                account,
+                target: tx_context::sender(ctx),
+                to_follow
+            }
+        )
     }
 }
