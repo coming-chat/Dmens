@@ -33,11 +33,13 @@ module dmens::dmens {
     const APP_ID_FOR_COMINGCHAT_WEB: u8 = 1;
 
     /// Text size overflow.
-    const ERR_TEXT_OVERFLOW: u64 = 0;
+    const ERR_TEXT_OVERFLOW: u64 = 1;
     /// Require reference Dmens id
-    const ERR_REQUIRE_REF_ID: u64 = 1;
+    const ERR_REQUIRE_REF_ID: u64 = 2;
     /// Unsupport action
-    const ERR_UNEXPECTED_ACTION: u64 = 2;
+    const ERR_UNEXPECTED_ACTION: u64 = 3;
+    /// Follow self
+    const ERR_FOLLOW_SELF: u64 = 4;
 
     struct FollowEvent has copy, drop {
         account: address,
@@ -254,6 +256,10 @@ module dmens::dmens {
         to_follow: bool,
         ctx: &mut TxContext,
     ) {
+        if (account == tx_context::sender(ctx)) {
+            abort ERR_FOLLOW_SELF
+        };
+
         if (to_follow) {
             vec_set::insert(&mut follows.accounts, account);
         } else {
