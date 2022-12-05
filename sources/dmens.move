@@ -6,13 +6,14 @@
 module dmens::dmens {
     use std::option::{Self, Option, some, none};
     use std::string::{Self, String};
-    use std::vector::length;
+    use std::vector::{Self, length};
 
     use sui::object::{Self, UID};
+    use sui::table::{Self, Table};
+    use sui::object_table::{Self, ObjectTable};
+
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
-    use sui::vec_set::{Self, VecSet};
-    use sui::event::emit;
 
     friend dmens::profile;
 
@@ -33,19 +34,11 @@ module dmens::dmens {
     const APP_ID_FOR_COMINGCHAT_WEB: u8 = 1;
 
     /// Text size overflow.
-    const ERR_TEXT_OVERFLOW: u64 = 1;
+    const ERR_TEXT_OVERFLOW: u64 = 0;
     /// Require reference Dmens id
-    const ERR_REQUIRE_REF_ID: u64 = 2;
+    const ERR_REQUIRE_REF_ID: u64 = 1;
     /// Unsupport action
-    const ERR_UNEXPECTED_ACTION: u64 = 3;
-    /// Follow self
-    const ERR_FOLLOW_SELF: u64 = 4;
-
-    struct FollowEvent has copy, drop {
-        account: address,
-        target: address,
-        to_follow: bool
-    }
+    const ERR_UNEXPECTED_ACTION: u64 = 2;
 
     /// Dmens NFT (i.e., a post, retweet, like, reply message etc).
     struct Dmens has key, store {
@@ -63,25 +56,43 @@ module dmens::dmens {
         action: u8,
     }
 
-    struct Follows has key {
+    struct DmensMeta has key {
         id: UID,
-        accounts: VecSet<address>
+        next_index: u64,
+        follows: Table<address, bool>,
+        dmens_table: ObjectTable<u64, Dmens>
     }
 
-    public(friend) fun new_follow(
+    public(friend) fun dmens_meta(
         ctx: &mut TxContext,
     ) {
         transfer::transfer(
-            Follows {
+            DmensMeta {
                 id: object::new(ctx),
-                accounts: vec_set::empty<address>()
+                next_index: 0,
+                follows: table::new<address, bool>(ctx),
+                dmens_table: object_table::new<u64, Dmens>(ctx)
             },
             tx_context::sender(ctx)
         )
     }
 
+    public(friend) fun destory_all(
+        meta: DmensMeta,
+    ) {
+        let next_index = meta.next_index;
+        batch_burn(&mut meta, 0, next_index);
+
+        let DmensMeta { id, next_index: _, dmens_table, follows } = meta;
+
+        object_table::destroy_empty(dmens_table);
+        table::drop(follows);
+        object::delete(id);
+    }
+
     /// For ACTION_POST
     fun post_internal(
+        meta: &mut DmensMeta,
         app_id: u8,
         text: vector<u8>,
         ctx: &mut TxContext,
@@ -97,11 +108,13 @@ module dmens::dmens {
             action: ACTION_POST
         };
 
-        transfer::transfer(dmens, tx_context::sender(ctx));
+        object_table::add(&mut meta.dmens_table, meta.next_index, dmens);
+        meta.next_index = meta.next_index + 1
     }
 
     /// For ACTION_RETWEET
     fun retweet_internal(
+        meta: &mut DmensMeta,
         app_id: u8,
         ref_id: Option<address>,
         ctx: &mut TxContext,
@@ -117,11 +130,13 @@ module dmens::dmens {
             action: ACTION_RETWEET,
         };
 
-        transfer::transfer(dmens, tx_context::sender(ctx));
+        object_table::add(&mut meta.dmens_table, meta.next_index, dmens);
+        meta.next_index = meta.next_index + 1
     }
 
     /// For ACTION_QUOTE_TWEET
     fun quote_tweet_internal(
+        meta: &mut DmensMeta,
         app_id: u8,
         text: vector<u8>,
         ref_id: Option<address>,
@@ -139,11 +154,13 @@ module dmens::dmens {
             action: ACTION_QUOTE_TWEET
         };
 
-        transfer::transfer(dmens, tx_context::sender(ctx));
+        object_table::add(&mut meta.dmens_table, meta.next_index, dmens);
+        meta.next_index = meta.next_index + 1
     }
 
     /// For ACTION_REPLY
     fun reply_internal(
+        meta: &mut DmensMeta,
         app_id: u8,
         text: vector<u8>,
         ref_id: Option<address>,
@@ -161,11 +178,13 @@ module dmens::dmens {
             action: ACTION_REPLY
         };
 
-        transfer::transfer(dmens, tx_context::sender(ctx));
+        object_table::add(&mut meta.dmens_table, meta.next_index, dmens);
+        meta.next_index = meta.next_index + 1
     }
 
     /// For ACTION_ATTACH
     fun attach_internal(
+        meta: &mut DmensMeta,
         app_id: u8,
         text: vector<u8>,
         ref_id: Option<address>,
@@ -183,11 +202,13 @@ module dmens::dmens {
             action: ACTION_ATTACH
         };
 
-        transfer::transfer(dmens, tx_context::sender(ctx));
+        object_table::add(&mut meta.dmens_table, meta.next_index, dmens);
+        meta.next_index = meta.next_index + 1
     }
 
     /// For ACTION_LIKE
     fun like_internal(
+        meta: &mut DmensMeta,
         app_id: u8,
         ref_id: Option<address>,
         ctx: &mut TxContext,
@@ -203,18 +224,20 @@ module dmens::dmens {
             action: ACTION_LIKE,
         };
 
-        transfer::transfer(dmens, tx_context::sender(ctx));
+        object_table::add(&mut meta.dmens_table, meta.next_index, dmens);
+        meta.next_index = meta.next_index + 1
     }
 
     /// Mint (post) a Dmens object without referencing another object.
     public entry fun post(
+        meta: &mut DmensMeta,
         app_identifier: u8,
         action: u8,
         text: vector<u8>,
         ctx: &mut TxContext,
     ) {
         if (action == ACTION_POST) {
-            post_internal(app_identifier, text, ctx);
+            post_internal(meta, app_identifier, text, ctx);
         } else {
             abort ERR_UNEXPECTED_ACTION
         }
@@ -223,6 +246,7 @@ module dmens::dmens {
     /// Mint (post) a Dmens object and reference another
     /// object (i.e., to simulate retweet, reply, like, attach).
     public entry fun post_with_ref(
+        meta: &mut DmensMeta,
         app_identifier: u8,
         action: u8,
         text: vector<u8>,
@@ -230,15 +254,15 @@ module dmens::dmens {
         ctx: &mut TxContext,
     ) {
         if (action == ACTION_RETWEET) {
-            retweet_internal(app_identifier, some(ref_identifier), ctx)
+            retweet_internal(meta, app_identifier, some(ref_identifier), ctx)
         } else if (action == ACTION_QUOTE_TWEET) {
-            quote_tweet_internal(app_identifier, text, some(ref_identifier), ctx)
+            quote_tweet_internal(meta, app_identifier, text, some(ref_identifier), ctx)
         } else if (action == ACTION_REPLY) {
-            reply_internal(app_identifier, text, some(ref_identifier), ctx)
+            reply_internal(meta, app_identifier, text, some(ref_identifier), ctx)
         } else if (action == ACTION_ATTACH) {
-            attach_internal(app_identifier, text, some(ref_identifier), ctx)
+            attach_internal(meta, app_identifier, text, some(ref_identifier), ctx)
         } else if (action == ACTION_LIKE) {
-            like_internal(app_identifier, some(ref_identifier), ctx)
+            like_internal(meta, app_identifier, some(ref_identifier), ctx)
         } else {
             abort ERR_UNEXPECTED_ACTION
         }
@@ -251,27 +275,72 @@ module dmens::dmens {
     }
 
     public entry fun follow(
-        follows: &mut Follows,
-        account: address,
-        to_follow: bool,
-        ctx: &mut TxContext,
+        meta: &mut DmensMeta,
+        accounts: vector<address>,
     ) {
-        if (account == tx_context::sender(ctx)) {
-            abort ERR_FOLLOW_SELF
+        let (i, len) = (0, vector::length(&accounts));
+        while (i < len) {
+            let account = vector::pop_back(&mut accounts);
+            table::add(&mut meta.follows, account, true);
+            i = i + 1
         };
+    }
 
-        if (to_follow) {
-            vec_set::insert(&mut follows.accounts, account);
-        } else {
-            vec_set::remove(&mut follows.accounts, &account);
+    public entry fun unfollow(
+        meta: &mut DmensMeta,
+        accounts: vector<address>,
+    ) {
+        let (i, len) = (0, vector::length(&accounts));
+        while (i < len) {
+            let account = vector::pop_back(&mut accounts);
+
+            if (table::contains(&meta.follows, account)) {
+                table::remove(&mut meta.follows, account);
+            };
+
+            i = i + 1
         };
+    }
 
-        emit(
-            FollowEvent {
-                account,
-                target: tx_context::sender(ctx),
-                to_follow
-            }
+    public entry fun batch_burn(
+        meta: &mut DmensMeta,
+        start: u64,
+        end: u64
+    ) {
+        while (start < end) {
+            if (object_table::contains(&meta.dmens_table, start)) {
+                burn(object_table::remove(&mut meta.dmens_table, start))
+            };
+
+            start = start + 1
+        }
+    }
+
+    public entry fun burn_with_index(
+        meta: &mut DmensMeta,
+        index: u64,
+    ) {
+        let dmens = object_table::remove(&mut meta.dmens_table, index);
+        let Dmens { id, app_id: _, poster: _, text: _, ref_id: _, action: _ } = dmens;
+        object::delete(id);
+    }
+
+    public entry fun take(
+        meta: &mut DmensMeta,
+        index: u64,
+        receiver: address,
+    ) {
+        transfer::transfer(
+            object_table::remove(&mut meta.dmens_table, index),
+            receiver
         )
+    }
+
+    public entry fun place(
+        meta: &mut DmensMeta,
+        dmens: Dmens,
+    ) {
+        object_table::add(&mut meta.dmens_table, meta.next_index, dmens);
+        meta.next_index = meta.next_index + 1
     }
 }
