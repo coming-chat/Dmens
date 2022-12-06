@@ -1,11 +1,11 @@
 // Copyright 2022 ComingChat Authors. Licensed under Apache-2.0 License.
 module dmens::profile {
-    use std::vector;
     use std::bcs;
     use std::hash::sha3_256;
+    use std::vector;
 
-    use sui::object::{Self, UID};
     use sui::ed25519::ed25519_verify;
+    use sui::object::{Self, UID};
     use sui::table::{Self, Table};
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
