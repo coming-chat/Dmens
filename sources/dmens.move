@@ -58,7 +58,7 @@ module dmens::dmens {
     struct DmensMeta has key {
         id: UID,
         next_index: u64,
-        follows: Table<address, bool>,
+        follows: Table<address, address>,
         dmens_table: Table<u64, Dmens>
     }
 
@@ -70,7 +70,7 @@ module dmens::dmens {
             DmensMeta {
                 id: object::new(ctx),
                 next_index: 0,
-                follows: table::new<address, bool>(ctx),
+                follows: table::new<address, address>(ctx),
                 dmens_table: table::new<u64, Dmens>(ctx)
             },
             tx_context::sender(ctx)
@@ -289,7 +289,7 @@ module dmens::dmens {
         let (i, len) = (0, vector::length(&accounts));
         while (i < len) {
             let account = vector::pop_back(&mut accounts);
-            table::add(&mut meta.follows, account, true);
+            table::add(&mut meta.follows, account, account);
             i = i + 1
         };
     }
