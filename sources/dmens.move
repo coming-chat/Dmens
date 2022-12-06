@@ -10,7 +10,6 @@ module dmens::dmens {
 
     use sui::object::{Self, UID};
     use sui::table::{Self, Table};
-    use sui::object_table::{Self, ObjectTable};
 
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
@@ -60,7 +59,7 @@ module dmens::dmens {
         id: UID,
         next_index: u64,
         follows: Table<address, bool>,
-        dmens_table: ObjectTable<u64, Dmens>
+        dmens_table: Table<u64, Dmens>
     }
 
     public(friend) fun dmens_meta(
@@ -71,7 +70,7 @@ module dmens::dmens {
                 id: object::new(ctx),
                 next_index: 0,
                 follows: table::new<address, bool>(ctx),
-                dmens_table: object_table::new<u64, Dmens>(ctx)
+                dmens_table: table::new<u64, Dmens>(ctx)
             },
             tx_context::sender(ctx)
         )
@@ -85,7 +84,9 @@ module dmens::dmens {
 
         let DmensMeta { id, next_index: _, dmens_table, follows } = meta;
 
-        object_table::destroy_empty(dmens_table);
+        // Dmens no drop ability, so use destroy_empty
+        table::destroy_empty(dmens_table);
+        
         table::drop(follows);
         object::delete(id);
     }
@@ -108,7 +109,7 @@ module dmens::dmens {
             action: ACTION_POST
         };
 
-        object_table::add(&mut meta.dmens_table, meta.next_index, dmens);
+        table::add(&mut meta.dmens_table, meta.next_index, dmens);
         meta.next_index = meta.next_index + 1
     }
 
@@ -130,7 +131,7 @@ module dmens::dmens {
             action: ACTION_RETWEET,
         };
 
-        object_table::add(&mut meta.dmens_table, meta.next_index, dmens);
+        table::add(&mut meta.dmens_table, meta.next_index, dmens);
         meta.next_index = meta.next_index + 1
     }
 
@@ -154,7 +155,7 @@ module dmens::dmens {
             action: ACTION_QUOTE_TWEET
         };
 
-        object_table::add(&mut meta.dmens_table, meta.next_index, dmens);
+        table::add(&mut meta.dmens_table, meta.next_index, dmens);
         meta.next_index = meta.next_index + 1
     }
 
@@ -178,7 +179,7 @@ module dmens::dmens {
             action: ACTION_REPLY
         };
 
-        object_table::add(&mut meta.dmens_table, meta.next_index, dmens);
+        table::add(&mut meta.dmens_table, meta.next_index, dmens);
         meta.next_index = meta.next_index + 1
     }
 
@@ -202,7 +203,7 @@ module dmens::dmens {
             action: ACTION_ATTACH
         };
 
-        object_table::add(&mut meta.dmens_table, meta.next_index, dmens);
+        table::add(&mut meta.dmens_table, meta.next_index, dmens);
         meta.next_index = meta.next_index + 1
     }
 
@@ -224,7 +225,7 @@ module dmens::dmens {
             action: ACTION_LIKE,
         };
 
-        object_table::add(&mut meta.dmens_table, meta.next_index, dmens);
+        table::add(&mut meta.dmens_table, meta.next_index, dmens);
         meta.next_index = meta.next_index + 1
     }
 
@@ -308,8 +309,8 @@ module dmens::dmens {
         end: u64
     ) {
         while (start < end) {
-            if (object_table::contains(&meta.dmens_table, start)) {
-                burn(object_table::remove(&mut meta.dmens_table, start))
+            if (table::contains(&meta.dmens_table, start)) {
+                burn(table::remove(&mut meta.dmens_table, start))
             };
 
             start = start + 1
@@ -320,7 +321,7 @@ module dmens::dmens {
         meta: &mut DmensMeta,
         index: u64,
     ) {
-        let dmens = object_table::remove(&mut meta.dmens_table, index);
+        let dmens = table::remove(&mut meta.dmens_table, index);
         let Dmens { id, app_id: _, poster: _, text: _, ref_id: _, action: _ } = dmens;
         object::delete(id);
     }
@@ -331,7 +332,7 @@ module dmens::dmens {
         receiver: address,
     ) {
         transfer::transfer(
-            object_table::remove(&mut meta.dmens_table, index),
+            table::remove(&mut meta.dmens_table, index),
             receiver
         )
     }
@@ -340,7 +341,7 @@ module dmens::dmens {
         meta: &mut DmensMeta,
         dmens: Dmens,
     ) {
-        object_table::add(&mut meta.dmens_table, meta.next_index, dmens);
+        table::add(&mut meta.dmens_table, meta.next_index, dmens);
         meta.next_index = meta.next_index + 1
     }
 }
