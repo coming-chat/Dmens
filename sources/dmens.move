@@ -55,6 +55,7 @@ module dmens::dmens {
         action: u8,
     }
 
+    /// Meta config for user
     struct DmensMeta has key {
         id: UID,
         next_index: u64,
@@ -62,6 +63,7 @@ module dmens::dmens {
         dmens_table: Table<u64, Dmens>
     }
 
+    /// Called when the first profile::register
     public(friend) fun dmens_meta(
         ctx: &mut TxContext,
     ) {
@@ -76,6 +78,7 @@ module dmens::dmens {
         )
     }
 
+    /// Called when the profile::destory
     public(friend) fun destory_all(
         meta: DmensMeta,
     ) {
@@ -230,6 +233,7 @@ module dmens::dmens {
     }
 
     /// Mint (post) a Dmens object without referencing another object.
+    /// Call by user
     public entry fun post(
         meta: &mut DmensMeta,
         app_identifier: u8,
@@ -244,8 +248,9 @@ module dmens::dmens {
         }
     }
 
-    /// Mint (post) a Dmens object and reference another
+    /// Mint (post) a Dmens object and reference another.
     /// object (i.e., to simulate retweet, reply, like, attach).
+    /// Call by user
     public entry fun post_with_ref(
         meta: &mut DmensMeta,
         app_identifier: u8,
@@ -270,11 +275,14 @@ module dmens::dmens {
     }
 
     /// Burn a Dmens object.
+    /// Call by user
     public entry fun burn(dmens: Dmens) {
         let Dmens { id, app_id: _, poster: _, text: _, ref_id: _, action: _ } = dmens;
         object::delete(id);
     }
 
+    /// Follow accounts.
+    /// Call by user
     public entry fun follow(
         meta: &mut DmensMeta,
         accounts: vector<address>,
@@ -287,6 +295,8 @@ module dmens::dmens {
         };
     }
 
+    /// Unfollow accounts.
+    /// Call by user
     public entry fun unfollow(
         meta: &mut DmensMeta,
         accounts: vector<address>,
@@ -303,7 +313,8 @@ module dmens::dmens {
         };
     }
 
-    /// burn [start, end)
+    /// Batch burn [start, end) dmens objects.
+    /// Call by user
     public entry fun batch_burn(
         meta: &mut DmensMeta,
         start: u64,
@@ -326,6 +337,8 @@ module dmens::dmens {
         }
     }
 
+    /// Burn the dmens object by index.
+    /// Call by user
     public entry fun burn_with_index(
         meta: &mut DmensMeta,
         index: u64,
@@ -335,6 +348,8 @@ module dmens::dmens {
         object::delete(id);
     }
 
+    /// Take the dmens object from table and transfer it to receiver.
+    /// Call by user
     public entry fun take(
         meta: &mut DmensMeta,
         index: u64,
@@ -346,6 +361,8 @@ module dmens::dmens {
         )
     }
 
+    /// Place the dmens object to table.
+    /// Call by user
     public entry fun place(
         meta: &mut DmensMeta,
         dmens: Dmens,

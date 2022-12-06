@@ -10,7 +10,7 @@ module dmens::profile {
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
 
-    use dmens::dmens::dmens_meta;
+    use dmens::dmens::{dmens_meta, destory_all, DmensMeta};
 
     // TODO: replace real public key
     const INIT_CAPTCHA_PUBLIC_KEY: vector<u8> = x"";
@@ -36,6 +36,8 @@ module dmens::profile {
         )
     }
 
+    /// Update the captcha public key.
+    /// Call by deployer.
     public entry fun update_captcha_key(
         global: &mut Global,
         new_pubkey: vector<u8>,
@@ -45,7 +47,11 @@ module dmens::profile {
         global.captcha_public_key = new_pubkey
     }
 
-    public entry fun update_profile(
+    /// Register the account with profile and admin signature.
+    /// If it is called for the first time, dmens_meta will be created,
+    /// Otherwise only profile will be updated.
+    /// Call by user
+    public entry fun register(
         global: &mut Global,
         profile: vector<u8>,
         signature: vector<u8>,
@@ -72,14 +78,19 @@ module dmens::profile {
         *mut_profile = profile
     }
 
+    /// Destory the account
+    /// Profile and dmens_meta will be delete.
     public entry fun destory(
         global: &mut Global,
+        meta: DmensMeta,
         ctx: &mut TxContext
     ) {
-        let _ = table::remove(
+        let _profile = table::remove(
             &mut global.profiles,
             tx_context::sender(ctx)
         );
+
+        destory_all(meta)
     }
 
     #[test]
