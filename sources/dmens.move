@@ -86,7 +86,7 @@ module dmens::dmens {
 
         // Dmens no drop ability, so use destroy_empty
         table::destroy_empty(dmens_table);
-        
+
         table::drop(follows);
         object::delete(id);
     }
@@ -303,12 +303,19 @@ module dmens::dmens {
         };
     }
 
+    /// burn [start, end)
     public entry fun batch_burn(
         meta: &mut DmensMeta,
         start: u64,
         end: u64
     ) {
-        while (start < end) {
+        let real_end = if (meta.next_index < end) {
+            meta.next_index
+        } else {
+            end
+        };
+
+        while (start < real_end) {
             if (table::contains(&meta.dmens_table, start)) {
                 burn(table::remove(&mut meta.dmens_table, start))
             };
