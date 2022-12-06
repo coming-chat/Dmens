@@ -317,6 +317,8 @@ module dmens::dmens {
 
         while (start < real_end) {
             if (table::contains(&meta.dmens_table, start)) {
+                // Remove a dynamic field actually requires deleting the underlying object
+                // https://github.com/MystenLabs/sui/pull/6593
                 burn(table::remove(&mut meta.dmens_table, start))
             };
 
