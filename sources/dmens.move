@@ -16,8 +16,7 @@ module dmens::dmens {
     friend dmens::profile;
 
     /// Max text length.
-    /// Refer to https://github.com/twitter/twitter-text/blob/master/config/v3.json
-    const MAX_TEXT_LENGTH: u64 = 280;
+    const MAX_TEXT_LENGTH: u64 = 10000;
 
     /// Action Types
     const ACTION_POST: u8 = 0;
