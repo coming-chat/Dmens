@@ -12,6 +12,7 @@ module dmens::dmens {
     use sui::table::{Self, Table};
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
+    use sui::url::{Self, Url};
 
     friend dmens::profile;
 
@@ -25,6 +26,15 @@ module dmens::dmens {
     const ACTION_REPLY: u8 = 3;
     const ACTION_ATTACH: u8 = 4;
     const ACTION_LIKE: u8 = 5;
+
+    /// Urls for Action
+    // TODO: replace real urls
+    const URL_POST: vector<u8> = b"ipfs://QmZPWWy5Si54R3d26toaqRiqvCH7HkGdXkxwUgCm2oKKM2?filename=img-sq-01.png";
+    const URL_RETWEET: vector<u8> = b"ipfs://QmZPWWy5Si54R3d26toaqRiqvCH7HkGdXkxwUgCm2oKKM2?filename=img-sq-01.png";
+    const URL_QUOTE_TWEET: vector<u8> = b"ipfs://QmZPWWy5Si54R3d26toaqRiqvCH7HkGdXkxwUgCm2oKKM2?filename=img-sq-01.png";
+    const URL_REPLY: vector<u8> = b"ipfs://QmZPWWy5Si54R3d26toaqRiqvCH7HkGdXkxwUgCm2oKKM2?filename=img-sq-01.png";
+    const URL_ATTACH: vector<u8> = b"ipfs://QmZPWWy5Si54R3d26toaqRiqvCH7HkGdXkxwUgCm2oKKM2?filename=img-sq-01.png";
+    const URL_LIKE: vector<u8> = b"ipfs://QmZPWWy5Si54R3d26toaqRiqvCH7HkGdXkxwUgCm2oKKM2?filename=img-sq-01.png";
 
     /// APP IDs for filter
     const APP_ID_FOR_COMINGCHAT_APP: u8 = 0;
@@ -51,6 +61,8 @@ module dmens::dmens {
         ref_id: Option<address>,
         // Which action create the Dmens.
         action: u8,
+        // URL for the Dmens
+        url: Url
     }
 
     /// Meta config for user
@@ -107,7 +119,8 @@ module dmens::dmens {
             poster: tx_context::sender(ctx),
             text: some(string::utf8(text)),
             ref_id: none(),
-            action: ACTION_POST
+            action: ACTION_POST,
+            url: url::new_unsafe_from_bytes(URL_POST)
         };
 
         table::add(&mut meta.dmens_table, meta.next_index, dmens);
@@ -130,6 +143,7 @@ module dmens::dmens {
             text: none(),
             ref_id,
             action: ACTION_RETWEET,
+            url: url::new_unsafe_from_bytes(URL_RETWEET)
         };
 
         table::add(&mut meta.dmens_table, meta.next_index, dmens);
@@ -153,7 +167,8 @@ module dmens::dmens {
             poster: tx_context::sender(ctx),
             text: some(string::utf8(text)),
             ref_id,
-            action: ACTION_QUOTE_TWEET
+            action: ACTION_QUOTE_TWEET,
+            url: url::new_unsafe_from_bytes(URL_QUOTE_TWEET)
         };
 
         table::add(&mut meta.dmens_table, meta.next_index, dmens);
@@ -177,7 +192,8 @@ module dmens::dmens {
             poster: tx_context::sender(ctx),
             text: some(string::utf8(text)),
             ref_id,
-            action: ACTION_REPLY
+            action: ACTION_REPLY,
+            url: url::new_unsafe_from_bytes(URL_REPLY)
         };
 
         table::add(&mut meta.dmens_table, meta.next_index, dmens);
@@ -201,7 +217,8 @@ module dmens::dmens {
             poster: tx_context::sender(ctx),
             text: some(string::utf8(text)),
             ref_id,
-            action: ACTION_ATTACH
+            action: ACTION_ATTACH,
+            url: url::new_unsafe_from_bytes(URL_ATTACH)
         };
 
         table::add(&mut meta.dmens_table, meta.next_index, dmens);
@@ -224,6 +241,7 @@ module dmens::dmens {
             text: none(),
             ref_id,
             action: ACTION_LIKE,
+            url: url::new_unsafe_from_bytes(URL_LIKE)
         };
 
         table::add(&mut meta.dmens_table, meta.next_index, dmens);
@@ -275,7 +293,16 @@ module dmens::dmens {
     /// Burn a Dmens object.
     /// Call by user
     public entry fun burn(dmens: Dmens) {
-        let Dmens { id, app_id: _, poster: _, text: _, ref_id: _, action: _ } = dmens;
+        let Dmens {
+            id,
+            app_id: _,
+            poster: _,
+            text: _,
+            ref_id: _,
+            action: _,
+            url: _,
+        } = dmens;
+
         object::delete(id);
     }
 
@@ -342,7 +369,16 @@ module dmens::dmens {
         index: u64,
     ) {
         let dmens = table::remove(&mut meta.dmens_table, index);
-        let Dmens { id, app_id: _, poster: _, text: _, ref_id: _, action: _ } = dmens;
+        let Dmens {
+            id,
+            app_id: _,
+            poster: _,
+            text: _,
+            ref_id: _,
+            action: _,
+            url: _,
+        } = dmens;
+
         object::delete(id);
     }
 
