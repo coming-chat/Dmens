@@ -93,7 +93,7 @@ module dmens::dmens {
         meta: DmensMeta,
     ) {
         let next_index = meta.next_index;
-        batch_burn(&mut meta, 0, next_index);
+        batch_burn_range(&mut meta, 0, next_index);
 
         let DmensMeta { id, next_index: _, dmens_table, follows } = meta;
 
@@ -290,22 +290,6 @@ module dmens::dmens {
         }
     }
 
-    /// Burn a Dmens object.
-    /// Call by user
-    public entry fun burn(dmens: Dmens) {
-        let Dmens {
-            id,
-            app_id: _,
-            poster: _,
-            text: _,
-            ref_id: _,
-            action: _,
-            url: _,
-        } = dmens;
-
-        object::delete(id);
-    }
-
     /// Follow accounts.
     /// Call by user
     public entry fun follow(
@@ -338,9 +322,39 @@ module dmens::dmens {
         };
     }
 
+    /// Burn a Dmens object.
+    /// Call by user
+    public fun burn_by_object(dmens: Dmens) {
+        let Dmens {
+            id,
+            app_id: _,
+            poster: _,
+            text: _,
+            ref_id: _,
+            action: _,
+            url: _,
+        } = dmens;
+
+        object::delete(id);
+    }
+
+    /// Batch burn [dmens_1, ..., dmens_n] dmens objects.
+    /// Call by user
+    public entry fun batch_burn_objects(
+        dmens_vec: vector<Dmens>
+    ) {
+        let (i, len) = (0, vector::length(&dmens_vec));
+        while (i < len) {
+            burn_by_object(vector::pop_back(&mut dmens_vec));
+        };
+
+        // safe because we've drained the vector
+        vector::destroy_empty(dmens_vec)
+    }
+
     /// Batch burn [start, end) dmens objects.
     /// Call by user
-    public entry fun batch_burn(
+    public entry fun batch_burn_range(
         meta: &mut DmensMeta,
         start: u64,
         end: u64
@@ -355,53 +369,75 @@ module dmens::dmens {
             if (table::contains(&meta.dmens_table, start)) {
                 // Remove a dynamic field actually requires deleting the underlying object
                 // https://github.com/MystenLabs/sui/pull/6593
-                burn(table::remove(&mut meta.dmens_table, start))
+                burn_by_object(table::remove(&mut meta.dmens_table, start))
             };
 
             start = start + 1
         }
     }
 
-    /// Burn the dmens object by index.
+    /// Batch burn [idx_1, ..., idx_n] dmens objects.
     /// Call by user
-    public entry fun burn_with_index(
+    public entry fun batch_burn_indexes(
         meta: &mut DmensMeta,
-        index: u64,
+        indexes: vector<u64>
     ) {
-        let dmens = table::remove(&mut meta.dmens_table, index);
-        let Dmens {
-            id,
-            app_id: _,
-            poster: _,
-            text: _,
-            ref_id: _,
-            action: _,
-            url: _,
-        } = dmens;
+        let (i, len) = (0, vector::length(&indexes));
+        while (i < len) {
+            let index = vector::pop_back(&mut indexes);
 
-        object::delete(id);
+            if (table::contains(&meta.dmens_table, index)) {
+                // Remove a dynamic field actually requires deleting the underlying object
+                // https://github.com/MystenLabs/sui/pull/6593
+                burn_by_object(table::remove(&mut meta.dmens_table, index))
+            };
+
+            i = i + 1
+        };
     }
 
-    /// Take the dmens object from table and transfer it to receiver.
+    /// Batch take [idx_1, ..., idx_n] dmens objects from table
+    /// And transfer it to receiver.
     /// Call by user
-    public entry fun take(
+    public entry fun batch_take(
         meta: &mut DmensMeta,
-        index: u64,
+        indexes: vector<u64>,
         receiver: address,
     ) {
-        transfer::transfer(
-            table::remove(&mut meta.dmens_table, index),
-            receiver
-        )
+        let (i, len) = (0, vector::length(&indexes));
+        while (i < len) {
+            let index = vector::pop_back(&mut indexes);
+
+            if (table::contains(&meta.dmens_table, index)) {
+                // Remove a dynamic field actually requires deleting the underlying object
+                // https://github.com/MystenLabs/sui/pull/6593
+                transfer::transfer(
+                    table::remove(&mut meta.dmens_table, index),
+                    receiver
+                )
+            };
+
+            i = i + 1
+        }
     }
 
-    /// Place the dmens object to table.
+    /// Batch Place [dmens_1, ..., dmens_n] dmens objects to table.
     /// Call by user
-    public entry fun place(
+    public entry fun batch_place(
         meta: &mut DmensMeta,
-        dmens: Dmens,
+        dmens_vec: vector<Dmens>,
     ) {
-        table::add(&mut meta.dmens_table, meta.next_index, dmens);
-        meta.next_index = meta.next_index + 1
+        let (i, len) = (0, vector::length(&dmens_vec));
+        while (i < len) {
+            let dmens = vector::pop_back(&mut dmens_vec);
+
+            table::add(&mut meta.dmens_table, meta.next_index, dmens);
+            meta.next_index = meta.next_index + 1;
+
+            i = i + 1
+        };
+
+        // safe because we've drained the vector
+        vector::destroy_empty(dmens_vec)
     }
 }
