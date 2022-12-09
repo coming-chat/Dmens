@@ -346,6 +346,8 @@ module dmens::dmens {
         let (i, len) = (0, vector::length(&dmens_vec));
         while (i < len) {
             burn_by_object(vector::pop_back(&mut dmens_vec));
+
+            i = i + 1
         };
 
         // safe because we've drained the vector
