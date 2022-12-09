@@ -21,8 +21,8 @@ module dmens::dmens {
 
     /// Action Types
     const ACTION_POST: u8 = 0;
-    const ACTION_RETWEET: u8 = 1;
-    const ACTION_QUOTE_TWEET: u8 = 2;
+    const ACTION_REPOST: u8 = 1;
+    const ACTION_QUOTE_POST: u8 = 2;
     const ACTION_REPLY: u8 = 3;
     const ACTION_ATTACH: u8 = 4;
     const ACTION_LIKE: u8 = 5;
@@ -30,8 +30,8 @@ module dmens::dmens {
     /// Urls for Action
     // TODO: replace real urls
     const URL_POST: vector<u8> = b"ipfs://bafkreibat54rwwfuxm377yj5vlhjhyj7cbzex2tdhktxmom6rdco54up5a";
-    const URL_RETWEET: vector<u8> = b"ipfs://bafkreibat54rwwfuxm377yj5vlhjhyj7cbzex2tdhktxmom6rdco54up5a";
-    const URL_QUOTE_TWEET: vector<u8> = b"ipfs://bafkreibat54rwwfuxm377yj5vlhjhyj7cbzex2tdhktxmom6rdco54up5a";
+    const URL_REPOST: vector<u8> = b"ipfs://bafkreibat54rwwfuxm377yj5vlhjhyj7cbzex2tdhktxmom6rdco54up5a";
+    const URL_QUOTE_POST: vector<u8> = b"ipfs://bafkreibat54rwwfuxm377yj5vlhjhyj7cbzex2tdhktxmom6rdco54up5a";
     const URL_REPLY: vector<u8> = b"ipfs://bafkreibat54rwwfuxm377yj5vlhjhyj7cbzex2tdhktxmom6rdco54up5a";
     const URL_ATTACH: vector<u8> = b"ipfs://bafkreibat54rwwfuxm377yj5vlhjhyj7cbzex2tdhktxmom6rdco54up5a";
     const URL_LIKE: vector<u8> = b"ipfs://bafkreibat54rwwfuxm377yj5vlhjhyj7cbzex2tdhktxmom6rdco54up5a";
@@ -48,7 +48,7 @@ module dmens::dmens {
     /// Unsupport action
     const ERR_UNEXPECTED_ACTION: u64 = 2;
 
-    /// Dmens NFT (i.e., a post, retweet, like, reply message etc).
+    /// Dmens NFT (i.e., a post, repost, like, reply message etc).
     struct Dmens has key, store {
         id: UID,
         // The ID of the dmens app.
@@ -57,7 +57,7 @@ module dmens::dmens {
         poster: address,
         // Post's text.
         text: Option<String>,
-        // Set if referencing an another object (i.e., due to a Like, Retweet, Reply etc).
+        // Set if referencing an another object (i.e., due to a Like, Repost, Reply etc).
         // We allow referencing any object type, not ony Dmens NFTs.
         ref_id: Option<address>,
         // Which action create the Dmens.
@@ -130,8 +130,8 @@ module dmens::dmens {
         meta.next_index = meta.next_index + 1
     }
 
-    /// For ACTION_RETWEET
-    fun retweet_internal(
+    /// For ACTION_REPOST
+    fun repost_internal(
         meta: &mut DmensMeta,
         app_id: u8,
         ref_id: Option<address>,
@@ -145,16 +145,16 @@ module dmens::dmens {
             poster: tx_context::sender(ctx),
             text: none(),
             ref_id,
-            action: ACTION_RETWEET,
-            url: url::new_unsafe_from_bytes(URL_RETWEET)
+            action: ACTION_REPOST,
+            url: url::new_unsafe_from_bytes(URL_REPOST)
         };
 
         table::add(&mut meta.dmens_table, meta.next_index, dmens);
         meta.next_index = meta.next_index + 1
     }
 
-    /// For ACTION_QUOTE_TWEET
-    fun quote_tweet_internal(
+    /// For ACTION_QUOTE_POST
+    fun quote_post_internal(
         meta: &mut DmensMeta,
         app_id: u8,
         text: vector<u8>,
@@ -170,8 +170,8 @@ module dmens::dmens {
             poster: tx_context::sender(ctx),
             text: some(string::utf8(text)),
             ref_id,
-            action: ACTION_QUOTE_TWEET,
-            url: url::new_unsafe_from_bytes(URL_QUOTE_TWEET)
+            action: ACTION_QUOTE_POST,
+            url: url::new_unsafe_from_bytes(URL_QUOTE_POST)
         };
 
         table::add(&mut meta.dmens_table, meta.next_index, dmens);
@@ -268,7 +268,7 @@ module dmens::dmens {
     }
 
     /// Mint (post) a Dmens object and reference another.
-    /// object (i.e., to simulate retweet, reply, like, attach).
+    /// object (i.e., to simulate repost, reply, like, attach).
     /// Call by user
     public entry fun post_with_ref(
         meta: &mut DmensMeta,
@@ -278,10 +278,10 @@ module dmens::dmens {
         ref_identifier: address,
         ctx: &mut TxContext,
     ) {
-        if (action == ACTION_RETWEET) {
-            retweet_internal(meta, app_identifier, some(ref_identifier), ctx)
-        } else if (action == ACTION_QUOTE_TWEET) {
-            quote_tweet_internal(meta, app_identifier, text, some(ref_identifier), ctx)
+        if (action == ACTION_POST) {
+            repost_internal(meta, app_identifier, some(ref_identifier), ctx)
+        } else if (action == ACTION_QUOTE_POST) {
+            quote_post_internal(meta, app_identifier, text, some(ref_identifier), ctx)
         } else if (action == ACTION_REPLY) {
             reply_internal(meta, app_identifier, text, some(ref_identifier), ctx)
         } else if (action == ACTION_ATTACH) {
