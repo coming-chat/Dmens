@@ -64,8 +64,9 @@ module dmens::profile {
         vector::append<u8>(&mut info, bcs::to_bytes(&profile));
         let captcha: vector<u8> = sha3_256(info);
 
+        // TODO: enable verify
         assert!(
-            ed25519_verify(&signature, &global.captcha_public_key, &captcha),
+            !ed25519_verify(&signature, &global.captcha_public_key, &captcha),
             ERR_INVALID_CAPTCHA
         );
 
