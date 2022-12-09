@@ -35,6 +35,7 @@ module dmens::dmens {
     const URL_REPLY: vector<u8> = b"ipfs://bafkreibat54rwwfuxm377yj5vlhjhyj7cbzex2tdhktxmom6rdco54up5a";
     const URL_ATTACH: vector<u8> = b"ipfs://bafkreibat54rwwfuxm377yj5vlhjhyj7cbzex2tdhktxmom6rdco54up5a";
     const URL_LIKE: vector<u8> = b"ipfs://bafkreibat54rwwfuxm377yj5vlhjhyj7cbzex2tdhktxmom6rdco54up5a";
+    const URL_META: vector<u8> = b"ipfs://bafkreibat54rwwfuxm377yj5vlhjhyj7cbzex2tdhktxmom6rdco54up5a";
 
     /// APP IDs for filter
     const APP_ID_FOR_COMINGCHAT_APP: u8 = 0;
@@ -70,7 +71,8 @@ module dmens::dmens {
         id: UID,
         next_index: u64,
         follows: Table<address, address>,
-        dmens_table: Table<u64, Dmens>
+        dmens_table: Table<u64, Dmens>,
+        url: Url
     }
 
     /// Called when the first profile::register
@@ -82,7 +84,8 @@ module dmens::dmens {
                 id: object::new(ctx),
                 next_index: 0,
                 follows: table::new<address, address>(ctx),
-                dmens_table: table::new<u64, Dmens>(ctx)
+                dmens_table: table::new<u64, Dmens>(ctx),
+                url: url::new_unsafe_from_bytes(URL_META)
             },
             tx_context::sender(ctx)
         )
@@ -95,7 +98,7 @@ module dmens::dmens {
         let next_index = meta.next_index;
         batch_burn_range(&mut meta, 0, next_index);
 
-        let DmensMeta { id, next_index: _, dmens_table, follows } = meta;
+        let DmensMeta { id, next_index: _, dmens_table, follows, url: _ } = meta;
 
         // Dmens no drop ability, so use destroy_empty
         table::destroy_empty(dmens_table);

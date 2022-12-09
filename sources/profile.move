@@ -9,11 +9,14 @@ module dmens::profile {
     use sui::table::{Self, Table};
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
+    use sui::url::{Self, Url};
 
     use dmens::dmens::{dmens_meta, destory_all, DmensMeta};
 
     // TODO: replace real public key
     const INIT_CAPTCHA_PUBLIC_KEY: vector<u8> = x"";
+    // TODO: replace real urls
+    const URL_GLOABL: vector<u8> = b"ipfs://bafkreibat54rwwfuxm377yj5vlhjhyj7cbzex2tdhktxmom6rdco54up5a";
 
     const ERR_NO_PERMISSIONS: u64 = 1;
     const ERR_INVALID_CAPTCHA: u64 = 2;
@@ -22,7 +25,8 @@ module dmens::profile {
         id: UID,
         creator: address,
         captcha_public_key: vector<u8>,
-        profiles: Table<address, vector<u8>>
+        profiles: Table<address, vector<u8>>,
+        url: Url
     }
 
     fun init(ctx: &mut TxContext) {
@@ -32,6 +36,7 @@ module dmens::profile {
                 creator: tx_context::sender(ctx),
                 captcha_public_key: INIT_CAPTCHA_PUBLIC_KEY,
                 profiles: table::new<address, vector<u8>>(ctx),
+                url: url::new_unsafe_from_bytes(URL_GLOABL)
             }
         )
     }
