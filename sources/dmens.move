@@ -24,8 +24,7 @@ module dmens::dmens {
     const ACTION_REPOST: u8 = 1;
     const ACTION_QUOTE_POST: u8 = 2;
     const ACTION_REPLY: u8 = 3;
-    const ACTION_ATTACH: u8 = 4;
-    const ACTION_LIKE: u8 = 5;
+    const ACTION_LIKE: u8 = 4;
 
     /// Urls for Action
     // TODO: replace real urls
@@ -33,7 +32,6 @@ module dmens::dmens {
     const URL_REPOST: vector<u8> = b"ipfs://bafkreibat54rwwfuxm377yj5vlhjhyj7cbzex2tdhktxmom6rdco54up5a";
     const URL_QUOTE_POST: vector<u8> = b"ipfs://bafkreibat54rwwfuxm377yj5vlhjhyj7cbzex2tdhktxmom6rdco54up5a";
     const URL_REPLY: vector<u8> = b"ipfs://bafkreibat54rwwfuxm377yj5vlhjhyj7cbzex2tdhktxmom6rdco54up5a";
-    const URL_ATTACH: vector<u8> = b"ipfs://bafkreibat54rwwfuxm377yj5vlhjhyj7cbzex2tdhktxmom6rdco54up5a";
     const URL_LIKE: vector<u8> = b"ipfs://bafkreibat54rwwfuxm377yj5vlhjhyj7cbzex2tdhktxmom6rdco54up5a";
     const URL_META: vector<u8> = b"ipfs://bafkreibat54rwwfuxm377yj5vlhjhyj7cbzex2tdhktxmom6rdco54up5a";
 
@@ -42,11 +40,13 @@ module dmens::dmens {
     const APP_ID_FOR_COMINGCHAT_WEB: u8 = 1;
 
     /// Text size overflow.
-    const ERR_TEXT_OVERFLOW: u64 = 0;
+    const ERR_TEXT_OVERFLOW: u64 = 1;
     /// Require reference Dmens id
-    const ERR_REQUIRE_REF_ID: u64 = 1;
+    const ERR_REQUIRE_REF_ID: u64 = 2;
     /// Unsupport action
-    const ERR_UNEXPECTED_ACTION: u64 = 2;
+    const ERR_UNEXPECTED_ACTION: u64 = 3;
+    /// Invalid action because of text
+    const ERR_INVALID_ACTION: u64 = 4;
 
     /// Dmens NFT (i.e., a post, repost, like, reply message etc).
     struct Dmens has key, store {
@@ -73,6 +73,18 @@ module dmens::dmens {
         follows: Table<address, address>,
         dmens_table: Table<u64, Dmens>,
         url: Url
+    }
+
+    /// Like: transfer this object to post ref id
+    struct Like has key {
+        id: UID,
+        poster: address
+    }
+
+    /// Repost: transfer this object to post ref id
+    struct Repost has key {
+        id: UID,
+        poster: address
     }
 
     /// Called when the first profile::register
@@ -149,6 +161,14 @@ module dmens::dmens {
             url: url::new_unsafe_from_bytes(URL_REPOST)
         };
 
+        transfer::transfer(
+            Repost {
+                id: object::new(ctx),
+                poster: tx_context::sender(ctx),
+            },
+            option::extract(&mut ref_id)
+        );
+
         table::add(&mut meta.dmens_table, meta.next_index, dmens);
         meta.next_index = meta.next_index + 1
     }
@@ -173,6 +193,14 @@ module dmens::dmens {
             action: ACTION_QUOTE_POST,
             url: url::new_unsafe_from_bytes(URL_QUOTE_POST)
         };
+
+        transfer::transfer(
+            Repost {
+                id: object::new(ctx),
+                poster: tx_context::sender(ctx),
+            },
+            option::extract(&mut ref_id)
+        );
 
         table::add(&mut meta.dmens_table, meta.next_index, dmens);
         meta.next_index = meta.next_index + 1
@@ -203,31 +231,6 @@ module dmens::dmens {
         meta.next_index = meta.next_index + 1
     }
 
-    /// For ACTION_ATTACH
-    fun attach_internal(
-        meta: &mut DmensMeta,
-        app_id: u8,
-        text: vector<u8>,
-        ref_id: Option<address>,
-        ctx: &mut TxContext,
-    ) {
-        assert!(length(&text) <= MAX_TEXT_LENGTH, ERR_TEXT_OVERFLOW);
-        assert!(option::is_some(&ref_id), ERR_REQUIRE_REF_ID);
-
-        let dmens = Dmens {
-            id: object::new(ctx),
-            app_id,
-            poster: tx_context::sender(ctx),
-            text: some(string::utf8(text)),
-            ref_id,
-            action: ACTION_ATTACH,
-            url: url::new_unsafe_from_bytes(URL_ATTACH)
-        };
-
-        table::add(&mut meta.dmens_table, meta.next_index, dmens);
-        meta.next_index = meta.next_index + 1
-    }
-
     /// For ACTION_LIKE
     fun like_internal(
         meta: &mut DmensMeta,
@@ -247,6 +250,14 @@ module dmens::dmens {
             url: url::new_unsafe_from_bytes(URL_LIKE)
         };
 
+        transfer::transfer(
+            Like {
+                id: object::new(ctx),
+                poster: tx_context::sender(ctx),
+            },
+            option::extract(&mut ref_id)
+        );
+
         table::add(&mut meta.dmens_table, meta.next_index, dmens);
         meta.next_index = meta.next_index + 1
     }
@@ -261,6 +272,7 @@ module dmens::dmens {
         ctx: &mut TxContext,
     ) {
         if (action == ACTION_POST) {
+            assert!(length(&text) > 0, ERR_INVALID_ACTION);
             post_internal(meta, app_identifier, text, ctx);
         } else {
             abort ERR_UNEXPECTED_ACTION
@@ -278,15 +290,17 @@ module dmens::dmens {
         ref_identifier: address,
         ctx: &mut TxContext,
     ) {
-        if (action == ACTION_POST) {
+        if (action == ACTION_REPOST) {
+            assert!(length(&text) == 0, ERR_INVALID_ACTION);
             repost_internal(meta, app_identifier, some(ref_identifier), ctx)
         } else if (action == ACTION_QUOTE_POST) {
+            assert!(length(&text) > 0, ERR_INVALID_ACTION);
             quote_post_internal(meta, app_identifier, text, some(ref_identifier), ctx)
         } else if (action == ACTION_REPLY) {
+            assert!(length(&text) > 0, ERR_INVALID_ACTION);
             reply_internal(meta, app_identifier, text, some(ref_identifier), ctx)
-        } else if (action == ACTION_ATTACH) {
-            attach_internal(meta, app_identifier, text, some(ref_identifier), ctx)
         } else if (action == ACTION_LIKE) {
+            assert!(length(&text) == 0, ERR_INVALID_ACTION);
             like_internal(meta, app_identifier, some(ref_identifier), ctx)
         } else {
             abort ERR_UNEXPECTED_ACTION
