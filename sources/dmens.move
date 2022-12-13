@@ -11,7 +11,7 @@ module dmens::dmens {
     use sui::object::{Self, UID};
     use sui::table::{Self, Table};
     use sui::transfer;
-    use sui::tx_context::{Self, TxContext};
+    use sui::tx_context::{Self, TxContext, sender};
     use sui::url::{Self, Url};
 
     friend dmens::profile;
@@ -291,16 +291,16 @@ module dmens::dmens {
         ctx: &mut TxContext,
     ) {
         if (action == ACTION_REPOST) {
-            assert!(length(&text) == 0, ERR_INVALID_ACTION);
+            assert!(length(&text) == 0 && ref_identifier != sender(ctx), ERR_INVALID_ACTION);
             repost_internal(meta, app_identifier, some(ref_identifier), ctx)
         } else if (action == ACTION_QUOTE_POST) {
-            assert!(length(&text) > 0, ERR_INVALID_ACTION);
+            assert!(length(&text) > 0 && ref_identifier != sender(ctx), ERR_INVALID_ACTION);
             quote_post_internal(meta, app_identifier, text, some(ref_identifier), ctx)
         } else if (action == ACTION_REPLY) {
-            assert!(length(&text) > 0, ERR_INVALID_ACTION);
+            assert!(length(&text) > 0 && ref_identifier != sender(ctx), ERR_INVALID_ACTION);
             reply_internal(meta, app_identifier, text, some(ref_identifier), ctx)
         } else if (action == ACTION_LIKE) {
-            assert!(length(&text) == 0, ERR_INVALID_ACTION);
+            assert!(length(&text) == 0 && ref_identifier != sender(ctx), ERR_INVALID_ACTION);
             like_internal(meta, app_identifier, some(ref_identifier), ctx)
         } else {
             abort ERR_UNEXPECTED_ACTION
