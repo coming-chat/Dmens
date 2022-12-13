@@ -58,6 +58,34 @@ module dmens::dmens_test {
         test_scenario::return_shared(global);
     }
 
+    fun follow_(scenario: &mut Scenario) {
+        let dmens_meta = test_scenario::take_from_sender<DmensMeta>(scenario);
+
+        let accounts = vector::empty<address>();
+        vector::push_back(&mut accounts, CREATOR);
+        dmens::follow(
+            &mut dmens_meta,
+            accounts
+        );
+        assert!(dmens::meta_has_following(&dmens_meta, CREATOR), 3);
+
+        test_scenario::return_to_sender(scenario, dmens_meta)
+    }
+
+    fun unfollow_(scenario: &mut Scenario) {
+        let dmens_meta = test_scenario::take_from_sender<DmensMeta>(scenario);
+
+        let accounts = vector::empty<address>();
+        vector::push_back(&mut accounts, CREATOR);
+        dmens::unfollow(
+            &mut dmens_meta,
+            accounts,
+        );
+        assert!(dmens::meta_follows(&dmens_meta) == 0, 4);
+
+        test_scenario::return_to_sender(scenario, dmens_meta)
+    }
+
     fun post_(
         app_identifier: u8,
         action: u8,
@@ -74,7 +102,7 @@ module dmens::dmens_test {
             text,
             test_scenario::ctx(scenario)
         );
-        assert!(meta_index(&dmens_meta) == dmens_index + 1, 3);
+        assert!(meta_index(&dmens_meta) == dmens_index + 1, 5);
 
         test_scenario::return_to_sender(scenario, dmens_meta)
     }
@@ -115,6 +143,73 @@ module dmens::dmens_test {
 
         test_scenario::next_tx(scenario, USER);
         destroy_(scenario);
+
+        test_scenario::end(begin);
+    }
+
+    #[test]
+    fun test_follow() {
+        let begin = test_scenario::begin(CREATOR);
+        let scenario = &mut begin;
+
+        init_(scenario);
+        test_scenario::next_tx(scenario, USER);
+        register_(scenario);
+
+        test_scenario::next_tx(scenario, USER);
+        follow_(scenario);
+
+        test_scenario::end(begin);
+    }
+
+    #[test]
+    #[expected_failure]
+    fun test_follow_one_account_twice_should_fail() {
+        let begin = test_scenario::begin(CREATOR);
+        let scenario = &mut begin;
+
+        init_(scenario);
+        test_scenario::next_tx(scenario, USER);
+        register_(scenario);
+
+        test_scenario::next_tx(scenario, USER);
+        follow_(scenario);
+
+        test_scenario::next_tx(scenario, USER);
+        follow_(scenario);
+
+        test_scenario::end(begin);
+    }
+
+    #[test]
+    fun test_unfollow() {
+        let begin = test_scenario::begin(CREATOR);
+        let scenario = &mut begin;
+
+        init_(scenario);
+        test_scenario::next_tx(scenario, USER);
+        register_(scenario);
+
+        test_scenario::next_tx(scenario, USER);
+        follow_(scenario);
+
+        test_scenario::next_tx(scenario, USER);
+        unfollow_(scenario);
+
+        test_scenario::end(begin);
+    }
+
+    #[test]
+    fun test_unfollow_without_followings_should_ok() {
+        let begin = test_scenario::begin(CREATOR);
+        let scenario = &mut begin;
+
+        init_(scenario);
+        test_scenario::next_tx(scenario, USER);
+        register_(scenario);
+
+        test_scenario::next_tx(scenario, USER);
+        unfollow_(scenario);
 
         test_scenario::end(begin);
     }

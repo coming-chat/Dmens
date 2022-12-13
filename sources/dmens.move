@@ -478,6 +478,13 @@ module dmens::dmens {
         table::length(&dmens_mata.follows)
     }
 
+    public fun meta_has_following(
+        dmens_mata: &DmensMeta,
+        following: address
+    ): bool {
+        table::contains(&dmens_mata.follows, following)
+    }
+
     public fun meta_index(
         dmens_mata: &DmensMeta
     ): u64 {
