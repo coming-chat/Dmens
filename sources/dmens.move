@@ -496,4 +496,23 @@ module dmens::dmens {
     ): u64 {
         table::length(&dmens_mata.dmens_table)
     }
+
+    public fun meta_dmens_exist(
+        dmens_mata: &DmensMeta,
+        index: u64
+    ): bool {
+        table::contains(&dmens_mata.dmens_table, index)
+    }
+
+    public fun parse_like(
+        like: &Like
+    ): address {
+        like.poster
+    }
+
+    public fun parse_repost(
+        repost: &Repost
+    ): address {
+        repost.poster
+    }
 }
