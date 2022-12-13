@@ -459,4 +459,34 @@ module dmens::dmens {
         // safe because we've drained the vector
         vector::destroy_empty(dmens_vec)
     }
+
+    public fun parse_dmens(
+        dmens: &Dmens
+    ): (u8, address, Option<String>, Option<address>, u8) {
+        (
+            dmens.app_id,
+            dmens.poster,
+            dmens.text,
+            dmens.ref_id,
+            dmens.action,
+        )
+    }
+
+    public fun meta_follows(
+        dmens_mata: &DmensMeta
+    ): u64 {
+        table::length(&dmens_mata.follows)
+    }
+
+    public fun meta_index(
+        dmens_mata: &DmensMeta
+    ): u64 {
+        dmens_mata.next_index
+    }
+
+    public fun meta_dmens_count(
+        dmens_mata: &DmensMeta
+    ): u64 {
+        table::length(&dmens_mata.dmens_table)
+    }
 }

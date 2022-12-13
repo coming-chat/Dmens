@@ -41,6 +41,13 @@ module dmens::profile {
         )
     }
 
+    public fun has_exsits(
+        global: &Global,
+        user: address
+    ): bool {
+        table::contains(&global.profiles, user)
+    }
+
     /// Update the captcha public key.
     /// Call by deployer.
     public entry fun update_captcha_key(
@@ -75,7 +82,7 @@ module dmens::profile {
             ERR_INVALID_CAPTCHA
         );
 
-        if (!table::contains(&global.profiles, user)) {
+        if (!has_exsits(global, user)) {
             table::add(&mut global.profiles, user, vector::empty<u8>());
             dmens_meta(ctx);
         };
@@ -86,7 +93,7 @@ module dmens::profile {
 
     /// Destory the account
     /// Profile and dmens_meta will be delete.
-    public entry fun destory(
+    public entry fun destroy(
         global: &mut Global,
         meta: DmensMeta,
         ctx: &mut TxContext
@@ -99,16 +106,36 @@ module dmens::profile {
         destory_all(meta)
     }
 
+    #[test_only]
+    public fun init_for_testing(ctx: &mut TxContext) {
+        transfer::share_object(
+            Global {
+                id: object::new(ctx),
+                creator: tx_context::sender(ctx),
+                // TODO: replace after enable verify
+                // captcha_public_key: x"1ECFFCFE36FA28E7B21C936373EAC4F345EC5B66E2BDE7E67444ADBFAF614B09",
+                captcha_public_key: x"",
+                profiles: table::new<address, vector<u8>>(ctx),
+                url: url::new_unsafe_from_bytes(URL_GLOABL)
+            }
+        )
+    }
+
     #[test]
     fun test_ed25519_verify() {
+        use std::hash;
         use sui::ed25519::ed25519_verify;
 
         let _privkey = x"1B934F07804CEEEA5D9D59BE1834345EE747BEBD939D92E68F41FAC98C9C374B";
         let pubkey = x"1ECFFCFE36FA28E7B21C936373EAC4F345EC5B66E2BDE7E67444ADBFAF614B09";
 
-        let signature = x"B6A1424ACCB14F988E2A82E9B91E17575EF20878838054495D973F3370F739D7CA4E55F4A9FD85D2D7D8F259D543A3736E80F8601D89DA9CEB10FD8CE0560F01";
-        let msg = b"test";
+        let signature = x"2B1CE19FA75C46E07A7C66D489C56308A431CB4A3A0624B9D20777CD180CD9013CC2F4486FE9F82195D477F8A3CD4E0ED15DBD85A272147038358ACED02AC809";
+        // origin msg: 0x000000000000000000000000000000000000000b + 'test'
+        let origin_msg = x"000000000000000000000000000000000000000b0474657374";
+        let sign_msg = x"13cfe569fa1ccc85e634fd25094736c7efa26a57b8145f7fe6236a2e0d0a45ab";
 
-        assert!(ed25519_verify(&signature, &pubkey, &msg), 1)
+        assert!(sign_msg == hash::sha3_256(origin_msg), 1);
+
+        assert!(ed25519_verify(&signature, &pubkey, &sign_msg), 2)
     }
 }
