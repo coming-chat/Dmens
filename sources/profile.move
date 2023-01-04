@@ -13,8 +13,7 @@ module dmens::profile {
 
     use dmens::dmens::{dmens_meta, destory_all, DmensMeta};
 
-    // TODO: replace real public key
-    const INIT_CAPTCHA_PUBLIC_KEY: vector<u8> = x"";
+    const INIT_CAPTCHA_PUBLIC_KEY: vector<u8> = x"a7bcde68ec805cc414865bd07ad13a0bb519473bfe5018edc55c60a571616cad";
     // TODO: replace real urls
     const URL_GLOABL: vector<u8> = b"ipfs://bafkreibat54rwwfuxm377yj5vlhjhyj7cbzex2tdhktxmom6rdco54up5a";
 
