@@ -4,9 +4,10 @@ module dmens::profile {
     use std::hash::sha3_256;
     use std::vector;
 
+    use sui::dynamic_object_field as dof;
     use sui::ed25519::ed25519_verify;
-    use sui::object::{Self, UID};
-    use sui::table::{Self, Table};
+    use sui::object::{Self, ID, UID};
+    use sui::object_table::{Self, ObjectTable};
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
     use sui::url::{Self, Url};
@@ -16,15 +17,22 @@ module dmens::profile {
     const INIT_CAPTCHA_PUBLIC_KEY: vector<u8> = x"a7bcde68ec805cc414865bd07ad13a0bb519473bfe5018edc55c60a571616cad";
     // TODO: replace real urls
     const URL_GLOABL: vector<u8> = b"ipfs://bafkreibat54rwwfuxm377yj5vlhjhyj7cbzex2tdhktxmom6rdco54up5a";
+    const URL_PROFILE: vector<u8> = b"ipfs://bafkreibat54rwwfuxm377yj5vlhjhyj7cbzex2tdhktxmom6rdco54up5a";
 
     const ERR_NO_PERMISSIONS: u64 = 1;
     const ERR_INVALID_CAPTCHA: u64 = 2;
+
+    struct WrapperProfile has key, store {
+        id: UID,
+        profile: vector<u8>,
+        url: Url
+    }
 
     struct Global has key {
         id: UID,
         creator: address,
         captcha_public_key: vector<u8>,
-        profiles: Table<address, vector<u8>>,
+        profiles: ObjectTable<address, WrapperProfile>,
         url: Url
     }
 
@@ -34,7 +42,7 @@ module dmens::profile {
                 id: object::new(ctx),
                 creator: tx_context::sender(ctx),
                 captcha_public_key: INIT_CAPTCHA_PUBLIC_KEY,
-                profiles: table::new<address, vector<u8>>(ctx),
+                profiles: object_table::new<address, WrapperProfile>(ctx),
                 url: url::new_unsafe_from_bytes(URL_GLOABL)
             }
         )
@@ -44,7 +52,7 @@ module dmens::profile {
         global: &Global,
         user: address
     ): bool {
-        table::contains(&global.profiles, user)
+        object_table::contains(&global.profiles, user)
     }
 
     /// Update the captcha public key.
@@ -82,12 +90,47 @@ module dmens::profile {
         );
 
         if (!has_exsits(global, user)) {
-            table::add(&mut global.profiles, user, vector::empty<u8>());
+            let wrapper_profile = WrapperProfile {
+                id: object::new(ctx),
+                url: url::new_unsafe_from_bytes(URL_PROFILE),
+                profile
+            };
+
+            object_table::add(&mut global.profiles, user, wrapper_profile);
             dmens_meta(ctx);
         };
 
-        let mut_profile = table::borrow_mut(&mut global.profiles, user);
-        *mut_profile = profile
+        let mut_profile = object_table::borrow_mut(&mut global.profiles, user);
+        mut_profile.profile = profile
+    }
+
+    /// Attach an Item to a WrapperProfile.
+    /// Function is generic and allows any app to attach items to WrapperProfile
+    /// But the total count of items has to be lower than 255.
+    public entry fun add_item<T: key + store>(
+        global: &mut Global,
+        item: T,
+        ctx: &mut TxContext
+    ) {
+        let user = tx_context::sender(ctx);
+        let mut_profile = object_table::borrow_mut(&mut global.profiles, user);
+
+        dof::add(&mut mut_profile.id, object::id(&item), item);
+    }
+
+    /// Remove item from the WrapperProfile.
+    public entry fun remove_item<T: key + store>(
+        global: &mut Global,
+        item_id: ID,
+        ctx: &mut TxContext
+    ) {
+        let user = tx_context::sender(ctx);
+        let mut_profile = object_table::borrow_mut(&mut global.profiles, user);
+
+        transfer::transfer(
+            dof::remove<ID, T>(&mut mut_profile.id, item_id),
+            tx_context::sender(ctx)
+        );
     }
 
     /// Destory the account
@@ -97,10 +140,13 @@ module dmens::profile {
         meta: DmensMeta,
         ctx: &mut TxContext
     ) {
-        let _profile = table::remove(
+        let wrapper_profile = object_table::remove(
             &mut global.profiles,
             tx_context::sender(ctx)
         );
+
+        let WrapperProfile { id, profile: _profile, url: _url } = wrapper_profile;
+        object::delete(id);
 
         destory_all(meta)
     }
@@ -114,7 +160,7 @@ module dmens::profile {
                 // TODO: replace after enable verify
                 // captcha_public_key: x"1ECFFCFE36FA28E7B21C936373EAC4F345EC5B66E2BDE7E67444ADBFAF614B09",
                 captcha_public_key: x"",
-                profiles: table::new<address, vector<u8>>(ctx),
+                profiles: object_table::new<address, WrapperProfile>(ctx),
                 url: url::new_unsafe_from_bytes(URL_GLOABL)
             }
         )
