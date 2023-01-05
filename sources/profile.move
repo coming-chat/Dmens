@@ -25,6 +25,7 @@ module dmens::profile {
     struct WrapperProfile has key, store {
         id: UID,
         profile: vector<u8>,
+        owner: address,
         url: Url
     }
 
@@ -93,6 +94,7 @@ module dmens::profile {
             let wrapper_profile = WrapperProfile {
                 id: object::new(ctx),
                 url: url::new_unsafe_from_bytes(URL_PROFILE),
+                owner: user,
                 profile
             };
 
@@ -145,7 +147,7 @@ module dmens::profile {
             tx_context::sender(ctx)
         );
 
-        let WrapperProfile { id, profile: _profile, url: _url } = wrapper_profile;
+        let WrapperProfile { id, profile: _profile, url: _url, owner: _owner } = wrapper_profile;
         object::delete(id);
 
         destory_all(meta)
