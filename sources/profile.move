@@ -84,9 +84,8 @@ module dmens::profile {
         vector::append<u8>(&mut info, bcs::to_bytes(&profile));
         let captcha: vector<u8> = sha3_256(info);
 
-        // TODO: enable verify
         assert!(
-            !ed25519_verify(&signature, &global.captcha_public_key, &captcha),
+            ed25519_verify(&signature, &global.captcha_public_key, &captcha),
             ERR_INVALID_CAPTCHA
         );
 
@@ -159,9 +158,7 @@ module dmens::profile {
             Global {
                 id: object::new(ctx),
                 creator: tx_context::sender(ctx),
-                // TODO: replace after enable verify
-                // captcha_public_key: x"1ECFFCFE36FA28E7B21C936373EAC4F345EC5B66E2BDE7E67444ADBFAF614B09",
-                captcha_public_key: x"",
+                captcha_public_key: x"1ECFFCFE36FA28E7B21C936373EAC4F345EC5B66E2BDE7E67444ADBFAF614B09",
                 profiles: object_table::new<address, WrapperProfile>(ctx),
                 url: url::new_unsafe_from_bytes(URL_GLOABL)
             }
