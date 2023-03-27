@@ -56,6 +56,17 @@ module dmens::profile {
         object_table::contains(&global.profiles, user)
     }
 
+    public fun global_verify(
+        global: &Global,
+        signature: vector<u8>,
+        captcha: vector<u8>
+    ) {
+        assert!(
+            ed25519_verify(&signature, &global.captcha_public_key, &captcha),
+            ERR_INVALID_CAPTCHA
+        );
+    }
+
     /// Update the captcha public key.
     /// Call by deployer.
     public entry fun update_captcha_key(
@@ -82,12 +93,10 @@ module dmens::profile {
         let info: vector<u8> = vector::empty<u8>();
         vector::append<u8>(&mut info, bcs::to_bytes(&user));
         vector::append<u8>(&mut info, bcs::to_bytes(&profile));
+
         let captcha: vector<u8> = sha3_256(info);
 
-        assert!(
-            ed25519_verify(&signature, &global.captcha_public_key, &captcha),
-            ERR_INVALID_CAPTCHA
-        );
+        global_verify(global, signature, captcha);
 
         if (!has_exsits(global, user)) {
             let wrapper_profile = WrapperProfile {
@@ -173,10 +182,10 @@ module dmens::profile {
         let _privkey = x"1B934F07804CEEEA5D9D59BE1834345EE747BEBD939D92E68F41FAC98C9C374B";
         let pubkey = x"1ECFFCFE36FA28E7B21C936373EAC4F345EC5B66E2BDE7E67444ADBFAF614B09";
 
-        let signature = x"2B1CE19FA75C46E07A7C66D489C56308A431CB4A3A0624B9D20777CD180CD9013CC2F4486FE9F82195D477F8A3CD4E0ED15DBD85A272147038358ACED02AC809";
-        // origin msg: 0x000000000000000000000000000000000000000b + 'test'
-        let origin_msg = x"000000000000000000000000000000000000000b0474657374";
-        let sign_msg = x"13cfe569fa1ccc85e634fd25094736c7efa26a57b8145f7fe6236a2e0d0a45ab";
+        let signature = x"7423732E9A3BDB39A685C0B9FCB0B6272A443C7E9889D1DC4AD9BA17C0FEF7BA5064D7826C4EE32CFC42EB7F2822CC7DAB7327D482EFD56A1E912BA333A8160D";
+        // origin msg: 0x000000000000000000000000000000000000000000000000000000000000000b + 'test'
+        let origin_msg = x"000000000000000000000000000000000000000000000000000000000000000b0474657374";
+        let sign_msg = x"a1da62e532921ed2c13c1b68219bfd8943de4648897467030b727d7d7903af02";
 
         assert!(sign_msg == hash::sha3_256(origin_msg), 1);
 
