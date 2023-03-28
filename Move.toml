@@ -1,6 +1,7 @@
 [package]
 name = "dmens"
 version = "0.1.0"
+#published-at = "0x3b564b2e7a2f5938610e3655cb6a096b5ee5b6471ef262e58740218cc37b8e62"
 
 [dependencies]
 #Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework", rev = "testnet" }
