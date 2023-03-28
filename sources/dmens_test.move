@@ -1,4 +1,4 @@
-// Copyright 2022 ComingChat Authors. Licensed under Apache-2.0 License.
+// Copyright 2022-2023 ComingChat Authors. Licensed under Apache-2.0 License.
 #[test_only]
 module dmens::dmens_test {
     use std::option::some;

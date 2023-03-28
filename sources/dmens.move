@@ -1,4 +1,4 @@
-// Copyright 2022 ComingChat Authors. Licensed under Apache-2.0 License.
+// Copyright 2022-2023 ComingChat Authors. Licensed under Apache-2.0 License.
 // Dmens is a reduction of "Decentralized Moments",
 // building a blockchain Twitter protocol on the Sui network,
 // and integrating it in ComingChat in the form of a product similar
