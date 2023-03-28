@@ -137,7 +137,7 @@ module dmens::profile {
         let user = tx_context::sender(ctx);
         let mut_profile = object_table::borrow_mut(&mut global.profiles, user);
 
-        transfer::transfer(
+        transfer::public_transfer(
             dof::remove<ID, T>(&mut mut_profile.id, item_id),
             tx_context::sender(ctx)
         );

@@ -83,7 +83,7 @@ module dmens::collect_v1 {
 
         // transfer remain to sender
         if (value(&merged_coin) > 0) {
-            transfer::transfer(
+            transfer::public_transfer(
                 merged_coin,
                 tx_context::sender(ctx)
             )

@@ -41,10 +41,12 @@ module dmens::collect_v1_test {
             recipients,
             amounts,
             coins,
-            _captcha
+            captcha
         ) = get_test_data(scenario);
 
-        let signature = x"EE0C971A5AD6B25962850EB859AC68BD7B7F30AF4491B7898C48D0D01B456C3679B817AC79D43FA9B66122BA8A892EC9AC1AD8834659CFFA8B9F3C89973EA108";
+        print(&captcha);
+
+        let signature = x"56EA91CF7B6CDE471BDF27A38342880444AB2B3A9BA058D3D373D770E53287D0BC1F30084032F9F6BF59F10753CB6AE012A6086E3416A1F85913F6739B48BE01";
 
         let attributes_key = vector<String>[
             utf8(b"key1"),
