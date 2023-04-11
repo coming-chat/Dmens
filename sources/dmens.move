@@ -5,10 +5,12 @@
 // to WeChat Moments.
 module dmens::dmens {
     use std::option::{Self, Option, some, none};
-    use std::string::{Self, String};
+    use std::string::{Self, String, utf8};
     use std::vector::{Self, length};
 
+    use sui::display;
     use sui::object::{Self, UID};
+    use sui::package;
     use sui::table::{Self, Table};
     use sui::transfer;
     use sui::tx_context::{Self, TxContext, sender};
@@ -85,6 +87,34 @@ module dmens::dmens {
     struct Repost has key {
         id: UID,
         poster: address
+    }
+
+    /// One-Time-Witness for the module.
+    struct DMENS has drop {}
+
+    fun init(otw: DMENS, ctx: &mut TxContext) {
+        let keys = vector[
+            utf8(b"id"),
+            utf8(b"image_url")
+        ];
+        let values = vector[
+            utf8(b"{id}"),
+            utf8(b"{url.inner_url()}")
+        ];
+
+        // Claim the `Publisher` for the package!
+        let publisher = package::claim(otw, ctx);
+
+        // Get a new `Display` object for the `Dmens` type.
+        let display = display::new_with_fields<Dmens>(
+            &publisher, keys, values, ctx
+        );
+
+        // Commit first version of `Display` to apply changes.
+        display::update_version(&mut display);
+
+        transfer::public_transfer(publisher, sender(ctx));
+        transfer::public_transfer(display, sender(ctx));
     }
 
     /// Called when the first profile::register
