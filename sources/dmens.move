@@ -99,7 +99,7 @@ module dmens::dmens {
         ];
         let values = vector[
             utf8(b"{id}"),
-            utf8(b"{url.inner_url()}")
+            utf8(b"{url}")
         ];
 
         // Claim the `Publisher` for the package!
