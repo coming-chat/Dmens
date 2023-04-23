@@ -94,11 +94,11 @@ module dmens::dmens {
 
     fun init(otw: DMENS, ctx: &mut TxContext) {
         let keys = vector[
-            utf8(b"id"),
+            utf8(b"name"),
             utf8(b"image_url")
         ];
         let values = vector[
-            utf8(b"{id}"),
+            utf8(b"Dmens Action"),
             utf8(b"{url}")
         ];
 
