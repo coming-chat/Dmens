@@ -297,16 +297,12 @@ module dmens::dmens {
     public entry fun post(
         meta: &mut DmensMeta,
         app_identifier: u8,
-        action: u8,
         text: vector<u8>,
         ctx: &mut TxContext,
     ) {
-        if (action == ACTION_POST) {
-            assert!(length(&text) > 0, ERR_INVALID_ACTION);
-            post_internal(meta, app_identifier, text, ctx);
-        } else {
-            abort ERR_UNEXPECTED_ACTION
-        }
+        assert!(length(&text) > 0, ERR_INVALID_ACTION);
+
+        post_internal(meta, app_identifier, text, ctx);
     }
 
     /// Mint (post) a Dmens object and reference another.
@@ -502,47 +498,27 @@ module dmens::dmens {
         )
     }
 
-    public fun meta_follows(
-        dmens_mata: &DmensMeta
-    ): u64 {
+    public fun meta_follows(dmens_mata: &DmensMeta): u64 {
         table::length(&dmens_mata.follows)
     }
 
-    public fun meta_has_following(
-        dmens_mata: &DmensMeta,
-        following: address
-    ): bool {
+    public fun meta_is_following(dmens_mata: &DmensMeta, following: address): bool {
         table::contains(&dmens_mata.follows, following)
     }
 
-    public fun meta_index(
-        dmens_mata: &DmensMeta
-    ): u64 {
-        dmens_mata.next_index
+    public fun meta_count_and_next(dmens_mata: &DmensMeta): (u64, u64) {
+        return (table::length(&dmens_mata.dmens_table), dmens_mata.next_index)
     }
 
-    public fun meta_dmens_count(
-        dmens_mata: &DmensMeta
-    ): u64 {
-        table::length(&dmens_mata.dmens_table)
-    }
-
-    public fun meta_dmens_exist(
-        dmens_mata: &DmensMeta,
-        index: u64
-    ): bool {
+    public fun meta_has_dmens(dmens_mata: &DmensMeta, index: u64): bool {
         table::contains(&dmens_mata.dmens_table, index)
     }
 
-    public fun parse_like(
-        like: &Like
-    ): address {
+    public fun parse_like(like: &Like): address {
         like.poster
     }
 
-    public fun parse_repost(
-        repost: &Repost
-    ): address {
+    public fun parse_repost(repost: &Repost): address {
         repost.poster
     }
 }
