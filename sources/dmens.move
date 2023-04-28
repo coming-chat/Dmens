@@ -475,6 +475,21 @@ module dmens::dmens {
         vector::destroy_empty(dmens_vec)
     }
 
+    public entry fun batch_burn_like(
+        likes: vector<Like>
+    ) {
+        let (i, len) = (0, vector::length(&likes));
+        while (i < len) {
+            let Like { id: uid, poster: _poster } = (vector::pop_back(&mut likes));
+            object::delete(uid);
+
+            i = i + 1
+        };
+
+        // safe because we've drained the vector
+        vector::destroy_empty(likes)
+    }
+
     public fun parse_dmens(
         dmens: &Dmens
     ): (u8, address, Option<String>, Option<address>, u8) {

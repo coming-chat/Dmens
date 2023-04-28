@@ -782,4 +782,33 @@ module dmens::dmens_test {
 
         test_scenario::end(begin);
     }
+
+    #[test]
+    fun test_batch_burn_like() {
+        let begin = test_scenario::begin(CREATOR);
+        let scenario = &mut begin;
+
+        init_(scenario);
+        test_scenario::next_tx(scenario, USER);
+        register_(scenario);
+
+        test_scenario::next_tx(scenario, USER);
+        like_(
+            APP_ID_FOR_COMINGCHAT_TEST,
+            b"",
+            SOME_POST,
+            ORIGIN,
+            0,
+            scenario
+        );
+
+        test_scenario::next_tx(scenario, ORIGIN);
+        {
+            let like_object = test_scenario::take_from_address<Like>(scenario, ORIGIN);
+
+            dmens::batch_burn_like(vector<Like>[like_object])
+        };
+
+        test_scenario::end(begin);
+    }
 }
