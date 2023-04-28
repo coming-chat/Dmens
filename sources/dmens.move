@@ -78,13 +78,7 @@ module dmens::dmens {
     }
 
     /// Like: transfer this object to post ref id
-    struct Like has key {
-        id: UID,
-        poster: address
-    }
-
-    /// Repost: transfer this object to post ref id
-    struct Repost has key {
+    struct Like has key, store {
         id: UID,
         poster: address
     }
@@ -191,14 +185,6 @@ module dmens::dmens {
             url: url::new_unsafe_from_bytes(URL_REPOST)
         };
 
-        transfer::transfer(
-            Repost {
-                id: object::new(ctx),
-                poster: tx_context::sender(ctx),
-            },
-            option::extract(&mut ref_id)
-        );
-
         table::add(&mut meta.dmens_table, meta.next_index, dmens);
         meta.next_index = meta.next_index + 1
     }
@@ -223,14 +209,6 @@ module dmens::dmens {
             action: ACTION_QUOTE_POST,
             url: url::new_unsafe_from_bytes(URL_QUOTE_POST)
         };
-
-        transfer::transfer(
-            Repost {
-                id: object::new(ctx),
-                poster: tx_context::sender(ctx),
-            },
-            option::extract(&mut ref_id)
-        );
 
         table::add(&mut meta.dmens_table, meta.next_index, dmens);
         meta.next_index = meta.next_index + 1
@@ -266,6 +244,7 @@ module dmens::dmens {
         meta: &mut DmensMeta,
         app_id: u8,
         ref_id: Option<address>,
+        origin: address,
         ctx: &mut TxContext,
     ) {
         assert!(option::is_some(&ref_id), ERR_REQUIRE_REF_ID);
@@ -280,12 +259,12 @@ module dmens::dmens {
             url: url::new_unsafe_from_bytes(URL_LIKE)
         };
 
-        transfer::transfer(
+        transfer::public_transfer(
             Like {
                 id: object::new(ctx),
                 poster: tx_context::sender(ctx),
             },
-            option::extract(&mut ref_id)
+            origin
         );
 
         table::add(&mut meta.dmens_table, meta.next_index, dmens);
@@ -297,16 +276,12 @@ module dmens::dmens {
     public entry fun post(
         meta: &mut DmensMeta,
         app_identifier: u8,
-        action: u8,
         text: vector<u8>,
         ctx: &mut TxContext,
     ) {
-        if (action == ACTION_POST) {
-            assert!(length(&text) > 0, ERR_INVALID_ACTION);
-            post_internal(meta, app_identifier, text, ctx);
-        } else {
-            abort ERR_UNEXPECTED_ACTION
-        }
+        assert!(length(&text) > 0, ERR_INVALID_ACTION);
+
+        post_internal(meta, app_identifier, text, ctx);
     }
 
     /// Mint (post) a Dmens object and reference another.
@@ -329,12 +304,22 @@ module dmens::dmens {
         } else if (action == ACTION_REPLY) {
             assert!(length(&text) > 0 && ref_identifier != sender(ctx), ERR_INVALID_ACTION);
             reply_internal(meta, app_identifier, text, some(ref_identifier), ctx)
-        } else if (action == ACTION_LIKE) {
-            assert!(length(&text) == 0 && ref_identifier != sender(ctx), ERR_INVALID_ACTION);
-            like_internal(meta, app_identifier, some(ref_identifier), ctx)
         } else {
             abort ERR_UNEXPECTED_ACTION
         }
+    }
+
+    public entry fun like(
+        meta: &mut DmensMeta,
+        app_identifier: u8,
+        text: vector<u8>,
+        ref_identifier: address,
+        origin: address,
+        ctx: &mut TxContext,
+    ) {
+        assert!(length(&text) == 0 && ref_identifier != sender(ctx), ERR_INVALID_ACTION);
+
+        like_internal(meta, app_identifier, some(ref_identifier), origin, ctx)
     }
 
     /// Follow accounts.
@@ -502,47 +487,23 @@ module dmens::dmens {
         )
     }
 
-    public fun meta_follows(
-        dmens_mata: &DmensMeta
-    ): u64 {
+    public fun meta_follows(dmens_mata: &DmensMeta): u64 {
         table::length(&dmens_mata.follows)
     }
 
-    public fun meta_has_following(
-        dmens_mata: &DmensMeta,
-        following: address
-    ): bool {
+    public fun meta_is_following(dmens_mata: &DmensMeta, following: address): bool {
         table::contains(&dmens_mata.follows, following)
     }
 
-    public fun meta_index(
-        dmens_mata: &DmensMeta
-    ): u64 {
-        dmens_mata.next_index
+    public fun meta_count_and_next(dmens_mata: &DmensMeta): (u64, u64) {
+        return (table::length(&dmens_mata.dmens_table), dmens_mata.next_index)
     }
 
-    public fun meta_dmens_count(
-        dmens_mata: &DmensMeta
-    ): u64 {
-        table::length(&dmens_mata.dmens_table)
-    }
-
-    public fun meta_dmens_exist(
-        dmens_mata: &DmensMeta,
-        index: u64
-    ): bool {
+    public fun meta_has_dmens(dmens_mata: &DmensMeta, index: u64): bool {
         table::contains(&dmens_mata.dmens_table, index)
     }
 
-    public fun parse_like(
-        like: &Like
-    ): address {
+    public fun parse_like(like: &Like): address {
         like.poster
-    }
-
-    public fun parse_repost(
-        repost: &Repost
-    ): address {
-        repost.poster
     }
 }

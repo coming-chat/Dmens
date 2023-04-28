@@ -6,12 +6,13 @@ module dmens::dmens_test {
 
     use sui::test_scenario::{Self, Scenario};
 
-    use dmens::dmens::{Self, DmensMeta, Dmens, Like, Repost};
+    use dmens::dmens::{Self, DmensMeta, Dmens, Like};
     use dmens::profile::Global;
 
     const CREATOR: address = @0xA;
     const USER: address = @0xB;
     const SOME_POST: address = @0xC;
+    const ORIGIN: address = @0xD;
 
     /// Max text length.
     const MAX_TEXT_LENGTH: u64 = 10000;
@@ -55,7 +56,7 @@ module dmens::dmens_test {
             test_scenario::ctx(scenario)
         );
 
-        assert!(!dmens::profile::has_exsits(&global, USER), 2);
+        assert!(!dmens::profile::has_exsits(&global, USER), 1);
 
         test_scenario::return_shared(global);
     }
@@ -69,7 +70,7 @@ module dmens::dmens_test {
             &mut dmens_meta,
             accounts
         );
-        assert!(dmens::meta_has_following(&dmens_meta, CREATOR), 3);
+        assert!(dmens::meta_is_following(&dmens_meta, CREATOR), 1);
 
         test_scenario::return_to_sender(scenario, dmens_meta)
     }
@@ -83,61 +84,66 @@ module dmens::dmens_test {
             &mut dmens_meta,
             accounts,
         );
-        assert!(dmens::meta_follows(&dmens_meta) == 0, 4);
+        assert!(dmens::meta_follows(&dmens_meta) == 0, 1);
 
         test_scenario::return_to_sender(scenario, dmens_meta)
     }
 
     fun post_(
         app_identifier: u8,
-        action: u8,
         text: vector<u8>,
         scenario: &mut Scenario
     ) {
         let dmens_meta = test_scenario::take_from_sender<DmensMeta>(scenario);
 
-        let dmens_index = dmens::meta_index(&dmens_meta);
+        let (count1, next1) = dmens::meta_count_and_next(&dmens_meta);
         dmens::post(
             &mut dmens_meta,
             app_identifier,
-            action,
             text,
             test_scenario::ctx(scenario)
         );
-        assert!(dmens::meta_index(&dmens_meta) == dmens_index + 1, 5);
+        let (count2, next2) = dmens::meta_count_and_next(&dmens_meta);
+
+        assert!(count2 == count1 + 1, 1);
+        assert!(next2 == next1 + 1, 2);
 
         test_scenario::return_to_sender(scenario, dmens_meta)
     }
 
     fun like_(
         app_identifier: u8,
-        action: u8,
         text: vector<u8>,
         ref_identifier: address,
+        origin: address,
         take_index: u64,
         scenario: &mut Scenario
     ) {
         let dmens_meta = test_scenario::take_from_sender<DmensMeta>(scenario);
 
-        let dmens_index = dmens::meta_index(&dmens_meta);
-        dmens::post_with_ref(
+        let (count1, next1) = dmens::meta_count_and_next(&dmens_meta);
+        dmens::like(
             &mut dmens_meta,
             app_identifier,
-            action,
             text,
             ref_identifier,
+            origin,
             test_scenario::ctx(scenario)
         );
-        assert!(dmens::meta_index(&dmens_meta) == dmens_index + 1, 6);
+        let (count2, next2) = dmens::meta_count_and_next(&dmens_meta);
+
+        assert!(count2 == count1 + 1, 1);
+        assert!(next2 == next1 + 1, 2);
+
         test_scenario::return_to_sender(scenario, dmens_meta);
 
         test_scenario::next_tx(scenario, USER);
         {
             let dmens_meta = test_scenario::take_from_sender<DmensMeta>(scenario);
 
-            let like_object = test_scenario::take_from_address<Like>(scenario, SOME_POST);
-            assert!(dmens::parse_like(&like_object) == USER, 1);
-            test_scenario::return_to_address(SOME_POST, like_object);
+            let like_object = test_scenario::take_from_address<Like>(scenario, origin);
+            assert!(dmens::parse_like(&like_object) == USER, 3);
+            test_scenario::return_to_address(origin, like_object);
 
             let indexes = vector::empty<u64>();
             vector::push_back(&mut indexes, take_index);
@@ -156,9 +162,9 @@ module dmens::dmens_test {
             let dmens_like = test_scenario::take_from_sender<Dmens>(scenario);
 
             let (_app, poster, _text, ref_id, action) = dmens::parse_dmens(&dmens_like);
-            assert!(poster == USER, 2);
-            assert!(ref_id == some(SOME_POST), 3);
-            assert!(action == ACTION_LIKE, 4);
+            assert!(poster == USER, 4);
+            assert!(ref_id == some(SOME_POST), 5);
+            assert!(action == ACTION_LIKE, 6);
 
             let burns = vector::empty<Dmens>();
             vector::push_back(&mut burns, dmens_like);
@@ -170,7 +176,8 @@ module dmens::dmens_test {
         {
             let dmens_meta = test_scenario::take_from_sender<DmensMeta>(scenario);
 
-            assert!(dmens::meta_dmens_count(&dmens_meta) == 0, 5);
+            let (count, _) = dmens::meta_count_and_next(&dmens_meta);
+            assert!(count == 0, 7);
 
             test_scenario::return_to_sender(scenario, dmens_meta)
         };
@@ -187,7 +194,7 @@ module dmens::dmens_test {
     ) {
         let dmens_meta = test_scenario::take_from_sender<DmensMeta>(scenario);
 
-        let dmens_index = dmens::meta_index(&dmens_meta);
+        let (count1, next1) = dmens::meta_count_and_next(&dmens_meta);
         dmens::post_with_ref(
             &mut dmens_meta,
             app_identifier,
@@ -196,16 +203,16 @@ module dmens::dmens_test {
             ref_identifier,
             test_scenario::ctx(scenario)
         );
-        assert!(dmens::meta_index(&dmens_meta) == dmens_index + 1, 7);
+        let (count2, next2) = dmens::meta_count_and_next(&dmens_meta);
+
+        assert!(count2 == count1 + 1, 1);
+        assert!(next2 == next1 + 1, 2);
+
         test_scenario::return_to_sender(scenario, dmens_meta);
 
         test_scenario::next_tx(scenario, USER);
         {
             let dmens_meta = test_scenario::take_from_sender<DmensMeta>(scenario);
-
-            let repost_object = test_scenario::take_from_address<Repost>(scenario, SOME_POST);
-            assert!(dmens::parse_repost(&repost_object) == USER, 1);
-            test_scenario::return_to_address(SOME_POST, repost_object);
 
             let indexes = vector::empty<u64>();
             vector::push_back(&mut indexes, take_index);
@@ -242,7 +249,9 @@ module dmens::dmens_test {
         {
             let dmens_meta = test_scenario::take_from_sender<DmensMeta>(scenario);
 
-            assert!(dmens::meta_dmens_count(&dmens_meta) == dmens_count, 5);
+            let (count, _) = dmens::meta_count_and_next(&dmens_meta);
+
+            assert!(count == dmens_count, 5);
 
             test_scenario::return_to_sender(scenario, dmens_meta)
         };
@@ -257,7 +266,7 @@ module dmens::dmens_test {
     ) {
         let dmens_meta = test_scenario::take_from_sender<DmensMeta>(scenario);
 
-        let dmens_index = dmens::meta_index(&dmens_meta);
+        let (count1, next1) = dmens::meta_count_and_next(&dmens_meta);
         dmens::post_with_ref(
             &mut dmens_meta,
             app_identifier,
@@ -266,7 +275,10 @@ module dmens::dmens_test {
             ref_identifier,
             test_scenario::ctx(scenario)
         );
-        assert!(dmens::meta_index(&dmens_meta) == dmens_index + 1, 8);
+        let (count2, next2) = dmens::meta_count_and_next(&dmens_meta);
+
+        assert!(count2 == count1 + 1, 1);
+        assert!(next2 == next1 + 1, 2);
 
         test_scenario::return_to_sender(scenario, dmens_meta)
     }
@@ -279,14 +291,15 @@ module dmens::dmens_test {
             dmens::post(
                 &mut dmens_meta,
                 APP_ID_FOR_COMINGCHAT_TEST,
-                ACTION_POST,
                 b"post",
                 test_scenario::ctx(scenario)
             );
             i = i + 1
         };
 
-        assert!(dmens::meta_index(&dmens_meta) == count, 9);
+        let (new_count, _) = dmens::meta_count_and_next(&dmens_meta);
+
+        assert!(new_count == count, 9);
 
         test_scenario::return_to_sender(scenario, dmens_meta)
     }
@@ -305,9 +318,11 @@ module dmens::dmens_test {
         {
             let dmens_meta = test_scenario::take_from_sender<DmensMeta>(scenario);
 
+            let (count, index) = dmens::meta_count_and_next(&dmens_meta);
+
             assert!(dmens::meta_follows(&dmens_meta) == 0, 1);
-            assert!(dmens::meta_dmens_count(&dmens_meta) == 0, 2);
-            assert!(dmens::meta_index(&dmens_meta) == 0, 3);
+            assert!(count == 0, 2);
+            assert!(index == 0, 3);
 
             test_scenario::return_to_sender(scenario, dmens_meta);
         };
@@ -410,7 +425,6 @@ module dmens::dmens_test {
         test_scenario::next_tx(scenario, USER);
         post_(
             APP_ID_FOR_COMINGCHAT_TEST,
-            ACTION_POST,
             b"test_post",
             scenario
         );
@@ -431,7 +445,6 @@ module dmens::dmens_test {
         test_scenario::next_tx(scenario, USER);
         post_(
             APP_ID_FOR_COMINGCHAT_TEST,
-            ACTION_POST,
             b"",
             scenario
         );
@@ -460,7 +473,6 @@ module dmens::dmens_test {
 
         post_(
             APP_ID_FOR_COMINGCHAT_TEST,
-            ACTION_POST,
             text,
             scenario
         );
@@ -480,9 +492,9 @@ module dmens::dmens_test {
         test_scenario::next_tx(scenario, USER);
         like_(
             APP_ID_FOR_COMINGCHAT_TEST,
-            ACTION_LIKE,
             b"",
             SOME_POST,
+            ORIGIN,
             0,
             scenario
         );
@@ -503,9 +515,9 @@ module dmens::dmens_test {
         test_scenario::next_tx(scenario, USER);
         like_(
             APP_ID_FOR_COMINGCHAT_TEST,
-            ACTION_LIKE,
             b"test_like",
             SOME_POST,
+            ORIGIN,
             0,
             scenario
         );
@@ -525,9 +537,9 @@ module dmens::dmens_test {
         test_scenario::next_tx(scenario, USER);
         like_(
             APP_ID_FOR_COMINGCHAT_TEST,
-            ACTION_LIKE,
             b"",
             SOME_POST,
+            ORIGIN,
             0,
             scenario
         );
@@ -535,9 +547,9 @@ module dmens::dmens_test {
         test_scenario::next_tx(scenario, USER);
         like_(
             APP_ID_FOR_COMINGCHAT_TEST,
-            ACTION_LIKE,
             b"",
             SOME_POST,
+            ORIGIN,
             1,
             scenario
         );
@@ -681,27 +693,6 @@ module dmens::dmens_test {
     }
 
     #[test]
-    #[expected_failure(abort_code = dmens::dmens::ERR_UNEXPECTED_ACTION)]
-    fun test_unexpected_action() {
-        let begin = test_scenario::begin(CREATOR);
-        let scenario = &mut begin;
-
-        init_(scenario);
-        test_scenario::next_tx(scenario, USER);
-        register_(scenario);
-
-        test_scenario::next_tx(scenario, USER);
-        post_(
-            APP_ID_FOR_COMINGCHAT_TEST,
-            ACTION_REPLY,
-            b"test_reply",
-            scenario
-        );
-
-        test_scenario::end(begin);
-    }
-
-    #[test]
     fun test_batch_burn_indexes() {
         let begin = test_scenario::begin(CREATOR);
         let scenario = &mut begin;
@@ -721,14 +712,16 @@ module dmens::dmens_test {
             vector::push_back(&mut burns, 99);
             vector::push_back(&mut burns, 0);
 
-            assert!(dmens::meta_dmens_exist(&dmens_meta, 0), 1);
-            assert!(dmens::meta_dmens_exist(&dmens_meta, 99), 2);
+            assert!(dmens::meta_has_dmens(&dmens_meta, 0), 1);
+            assert!(dmens::meta_has_dmens(&dmens_meta, 99), 2);
 
             dmens::batch_burn_indexes(&mut dmens_meta, burns);
 
-            assert!(dmens::meta_dmens_count(&dmens_meta) == 98, 3);
-            assert!(!dmens::meta_dmens_exist(&dmens_meta, 0), 4);
-            assert!(!dmens::meta_dmens_exist(&dmens_meta, 99), 5);
+            let (count, _) = dmens::meta_count_and_next(&dmens_meta);
+
+            assert!(count == 98, 3);
+            assert!(!dmens::meta_has_dmens(&dmens_meta, 0), 4);
+            assert!(!dmens::meta_has_dmens(&dmens_meta, 99), 5);
 
             test_scenario::return_to_sender(scenario, dmens_meta)
         };
@@ -753,28 +746,36 @@ module dmens::dmens_test {
             let dmens_meta = test_scenario::take_from_sender<DmensMeta>(scenario);
 
             dmens::batch_burn_range(&mut dmens_meta, 0, 10);
-            assert!(dmens::meta_dmens_count(&dmens_meta) == 90, 1);
+            let (count, _) = dmens::meta_count_and_next(&dmens_meta);
+            assert!(count == 90, 1);
 
             dmens::batch_burn_range(&mut dmens_meta, 10, 20);
-            assert!(dmens::meta_dmens_count(&dmens_meta) == 80, 2);
+            let (count, _) = dmens::meta_count_and_next(&dmens_meta);
+            assert!(count == 80, 2);
 
             dmens::batch_burn_range(&mut dmens_meta, 10, 25);
-            assert!(dmens::meta_dmens_count(&dmens_meta) == 75, 3);
+            let (count, _) = dmens::meta_count_and_next(&dmens_meta);
+            assert!(count == 75, 3);
 
             dmens::batch_burn_range(&mut dmens_meta, 25, 25);
-            assert!(dmens::meta_dmens_count(&dmens_meta) == 75, 4);
+            let (count, _) = dmens::meta_count_and_next(&dmens_meta);
+            assert!(count == 75, 4);
 
             dmens::batch_burn_range(&mut dmens_meta, 25, 26);
-            assert!(dmens::meta_dmens_count(&dmens_meta) == 74, 5);
+            let (count, _) = dmens::meta_count_and_next(&dmens_meta);
+            assert!(count == 74, 5);
 
             dmens::batch_burn_range(&mut dmens_meta, 90, 101);
-            assert!(dmens::meta_dmens_count(&dmens_meta) == 64, 6);
+            let (count, _) = dmens::meta_count_and_next(&dmens_meta);
+            assert!(count == 64, 6);
 
             dmens::batch_burn_range(&mut dmens_meta, 90, 201);
-            assert!(dmens::meta_dmens_count(&dmens_meta) == 64, 7);
+            let (count, _) = dmens::meta_count_and_next(&dmens_meta);
+            assert!(count == 64, 7);
 
             dmens::batch_burn_range(&mut dmens_meta, 0, 201);
-            assert!(dmens::meta_dmens_count(&dmens_meta) == 0, 8);
+            let (count, _) = dmens::meta_count_and_next(&dmens_meta);
+            assert!(count == 0, 8);
 
             test_scenario::return_to_sender(scenario, dmens_meta)
         };
