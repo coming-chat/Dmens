@@ -100,15 +100,22 @@ module dmens::dmens {
         let publisher = package::claim(otw, ctx);
 
         // Get a new `Display` object for the `Dmens` type.
-        let display = display::new_with_fields<Dmens>(
+        let dmens_display = display::new_with_fields<Dmens>(
             &publisher, keys, values, ctx
         );
-
         // Commit first version of `Display` to apply changes.
-        display::update_version(&mut display);
+        display::update_version(&mut dmens_display);
+
+        // Get a new `Display` object for the `Dmens` type.
+        let meta_display = display::new_with_fields<DmensMeta>(
+            &publisher, keys, values, ctx
+        );
+        // Commit first version of `Display` to apply changes.
+        display::update_version(&mut meta_display);
 
         transfer::public_transfer(publisher, sender(ctx));
-        transfer::public_transfer(display, sender(ctx));
+        transfer::public_transfer(dmens_display, sender(ctx));
+        transfer::public_transfer(meta_display, sender(ctx));
     }
 
     /// Called when the first profile::register
