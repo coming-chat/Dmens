@@ -91,8 +91,13 @@ module dmens::dmens {
             utf8(b"name"),
             utf8(b"image_url")
         ];
-        let values = vector[
+        let dmens_values = vector[
             utf8(b"Dmens Action"),
+            utf8(b"{url}")
+        ];
+
+        let meta_values = vector[
+            utf8(b"Dmens Meta"),
             utf8(b"{url}")
         ];
 
@@ -101,14 +106,14 @@ module dmens::dmens {
 
         // Get a new `Display` object for the `Dmens` type.
         let dmens_display = display::new_with_fields<Dmens>(
-            &publisher, keys, values, ctx
+            &publisher, keys, dmens_values, ctx
         );
         // Commit first version of `Display` to apply changes.
         display::update_version(&mut dmens_display);
 
         // Get a new `Display` object for the `Dmens` type.
         let meta_display = display::new_with_fields<DmensMeta>(
-            &publisher, keys, values, ctx
+            &publisher, keys, meta_values, ctx
         );
         // Commit first version of `Display` to apply changes.
         display::update_version(&mut meta_display);
