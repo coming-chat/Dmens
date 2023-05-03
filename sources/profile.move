@@ -14,8 +14,10 @@ module dmens::profile {
 
     use dmens::dmens::{dmens_meta, destory_all, DmensMeta};
 
-    const INIT_CAPTCHA_PUBLIC_KEY: vector<u8> = x"a7bcde68ec805cc414865bd07ad13a0bb519473bfe5018edc55c60a571616cad";
-    // TODO: replace real urls
+    // on testnet
+    // const INIT_CAPTCHA_PUBLIC_KEY: vector<u8> = x"a7bcde68ec805cc414865bd07ad13a0bb519473bfe5018edc55c60a571616cad";
+    // on mainnet
+    const INIT_CAPTCHA_PUBLIC_KEY: vector<u8> = x"2798a48215521de12536c72a3ac317a9b128b4b98cab18545b3ffe129be0e762";
     const URL_GLOABL: vector<u8> = b"ipfs://bafkreibat54rwwfuxm377yj5vlhjhyj7cbzex2tdhktxmom6rdco54up5a";
     const URL_PROFILE: vector<u8> = b"ipfs://bafkreibat54rwwfuxm377yj5vlhjhyj7cbzex2tdhktxmom6rdco54up5a";
 

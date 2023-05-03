@@ -1,11 +1,11 @@
 [package]
 name = "dmens"
 version = "0.1.0"
-#published-at = "0xe7fb386dc1b6126b3bb3d615bd26e14fde399a4cc5663758011804c1283ad228"
+#published-at = "0x72ad8f46d4fc3bbc24df15f6c62a98044c2649a9a31895a957254b2cf16e0cb9"
 
 [dependencies]
-#Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework", rev = "testnet" }
-Sui = { local = "../sui/crates/sui-framework/packages/sui-framework" }
+Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "ae1212baf8f0837e25926d941db3d26a61c1bea2" }
+#Sui = { local = "../sui/crates/sui-framework/packages/sui-framework" }
 
 [addresses]
-dmens =  "0x0"
+dmens = "0x0"
