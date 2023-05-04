@@ -92,12 +92,12 @@ module dmens::dmens {
             utf8(b"image_url")
         ];
         let dmens_values = vector[
-            utf8(b"Dmens Action"),
+            utf8(b"DMens Action"),
             utf8(b"{url}")
         ];
 
         let meta_values = vector[
-            utf8(b"Dmens Meta"),
+            utf8(b"DMens Meta"),
             utf8(b"{url}")
         ];
 
